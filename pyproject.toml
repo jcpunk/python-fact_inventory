@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools", "pip-tools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fact-inventory"
+version = "0.1.0"
+description = "Store facts about a system in a database"
+authors = [{name = "Pat Riehecky"}, {email = "<riehecky@fnal.gov>"}]
+license = "MIT"
+readme = "README.md"
+
+requires-python = ">=3.10"
+dependencies = [
+    "sqlalchemy[asyncio,postgresql-asyncpg]>=2.0.36,<2.1",
+    "litestar[standard,sqlalchemy]>=2.12,<3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy",
+  "pre-commit",
+  "pytest",
+  "ruff",
+]
+
+[tool.ruff]
+fix = true
+line-length = 120
+src = ["app", "test"]
+
+[tool.ruff.lint]
+extend-select = [
+  "PL",     # pylint
+  "UP",     # pyupgrade
+  "I",      # isort
+  "LOG",    # logging
+  "B",      # bugbear
+  "S",      # bandit
+  "BLE",    # blind except
+  "Q",      # quotes
+  "RET",    # return
+  "TRY",    # tryceratops
+  "SIM",    # simplify
+  "DTZ",    # datetime
+  "TCH",    # type-checking
+  "ARG",    # unused-arguments
+  "ASYNC",  # async
+  "RUF",    # ruff specific rules
+]
+ignore = [
+  "SIM108"  # ternary is ugly
+]
+
+[tool.mypy]
+file = "app"
+warn_unused_ignores = true
+show_error_codes = true
+disable_bytearray_promotion = true
+disable_memoryview_promotion = true
+strict = true
