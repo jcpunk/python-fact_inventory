@@ -1,0 +1,56 @@
+{
+  "system_facts": {
+    "user_id": "root",
+    "user_uid": 0,
+    "user_gid": 0,
+    "user_gecos": "Super User",
+    "user_dir": "/root",
+    "user_shell": "/bin/bash",
+    "real_user_id": 0,
+    "effective_user_id": 0,
+    "real_group_id": 0,
+    "effective_group_id": 0
+  },
+  "package_facts": {
+    "glibc-common": [
+      {
+        "name": "glibc-common",
+        "version": "2.40",
+        "release": "11.fc41",
+        "epoch": null,
+        "arch": "x86_64",
+        "source": "rpm"
+      }
+    ],
+    "glibc-all-langpacks": [
+      {
+        "name": "glibc-all-langpacks",
+        "version": "2.40",
+        "release": "11.fc41",
+        "epoch": null,
+        "arch": "x86_64",
+        "source": "rpm"
+      }
+    ],
+    "glibc-gconv-extra": [
+      {
+        "name": "glibc-gconv-extra",
+        "version": "2.40",
+        "release": "11.fc41",
+        "epoch": null,
+        "arch": "x86_64",
+        "source": "rpm"
+      }
+    ],
+    "glibc": [
+      {
+        "name": "glibc",
+        "version": "2.40",
+        "release": "11.fc41",
+        "epoch": null,
+        "arch": "x86_64",
+        "source": "rpm"
+      }
+    ]
+  }
+}
