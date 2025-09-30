@@ -1,0 +1,33 @@
+---
+# ansible-playbook gather_facts.yml
+- name: Gather facts on system
+  hosts: localhost
+  gather_facts: no # gather with custom logic
+  tasks:
+    - name: Gather ansible system facts
+      ansible.builtin.setup:
+        gather_subset:
+          - "all"
+          - "!facter"
+          - "!ohai"
+      become: true
+
+    - name: Gather the package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Save gathered facts JSON to file so we are transparent
+      ansible.builtin.copy:
+        content: "{{ ansible_facts }}"
+        dest: "/tmp/all_my_facts.json"
+        mode: "0600"
+
+    - name: Make POST request with ansible_facts
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8000/v1/facts
+        method: POST
+        body_format: json
+        body:
+          system_facts: "{{ ansible_facts | combine({'packages': omit}) }}"
+          package_facts: "{{ ansible_facts.packages }}"
+        status_code: 201
