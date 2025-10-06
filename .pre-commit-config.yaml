@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.13.2
+    rev: v0.13.3
     hooks:
       - id: ruff-check
         args: [--fix]
@@ -21,6 +21,6 @@ repos:
         files: ^app/
 
   - repo: https://github.com/JoC0de/pre-commit-prettier
-    rev: v3.5.3
+    rev: v3.6.2
     hooks:
       - id: prettier
