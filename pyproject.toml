@@ -62,7 +62,7 @@ extend-select = [
   "PL",    # pylint
   "PTH",   # Use pathlib instead of os.path
   "PYI",   # Linting rules for type annotations.
-  "Q",     # Linting rules for quites
+  "Q",     # Linting rules for quotes
   "RET",   # Good return practices
   "RUF",   # Ruff specific lint rules
   "S",     # bandit
@@ -70,7 +70,7 @@ extend-select = [
   "TC",    # Enforce importing certain types in a TYPE_CHECKING block
   "TCH",   # Move type only imports to type-checking condition.
   "TID",   # Helps you write tidier imports.
-  "TRY",   # tryceratops - track exception handeling
+  "TRY",   # tryceratops - track exception handling
   "UP",    # pyupgrade - Warn if certain things can changed due to newer Python versions
   "W"      # PyCodeStyle warnings
 ]
