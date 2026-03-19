@@ -65,6 +65,11 @@ export RUNTIME=testing     # loads .env.testing (default)
 - **DATABASE_URI**: Database connection string (required) - PostgreSQL recommended
 - **RATE_LIMIT_MINUTES**: Minutes between allowed submissions per IP (default: 27)
 - **RETENTION_DAYS**: Days to keep records before the background purge removes them (default: 0 = disabled, PostgreSQL only)
+- **CREATE_ALL**: Auto-create tables on startup, bypassing Alembic (default: false)
+- **DB_POOL_SIZE**: Database connection pool size (default: 10, PostgreSQL only)
+- **DB_POOL_MAX_OVERFLOW**: Max connections above pool size (default: 20, PostgreSQL only)
+- **DB_POOL_TIMEOUT**: Seconds to wait for a connection from the pool (default: 30, PostgreSQL only)
+- **ALLOWED_ORIGINS**: Comma-separated list of allowed CORS origins (default: none)
 - **DEBUG**: Enable debug mode and OpenAPI docs (default: false)
 - **LOG_LEVEL**: Logging level - DEBUG, INFO, WARNING, ERROR (default: INFO)
 
@@ -77,16 +82,35 @@ DATABASE_URI=postgresql+asyncpg://user:password@localhost/dbname
 # Optional (with defaults)
 RATE_LIMIT_MINUTES=27
 RETENTION_DAYS=0
+DB_POOL_SIZE=10
+DB_POOL_MAX_OVERFLOW=20
+DB_POOL_TIMEOUT=30
+ALLOWED_ORIGINS=
 DEBUG=false
 LOG_LEVEL=INFO
 ```
 
 ## Running the Application
 
+### With Docker
+
+```bash
+docker build -t fact-inventory .
+docker run -p 8000:8000 \
+  -e DATABASE_URI=postgresql+asyncpg://user:pass@host/db \
+  -e RUNTIME=production \
+  fact-inventory
+```
+
+The container runs Alembic migrations on startup before starting the server.
+
+### Without Docker
+
 For production, use a production ASGI server like Uvicorn:
 
 ```bash
-uvicorn app_factory:create_app --factory --host 0.0.0.0 --port 8000
+RUNTIME=production alembic upgrade head
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 ### Data Retention

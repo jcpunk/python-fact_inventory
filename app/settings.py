@@ -9,6 +9,10 @@ Configurable elements (production):
   - RATE_LIMIT_MINUTES: int
   - RETENTION_DAYS: int
   - CREATE_ALL: bool
+  - DB_POOL_SIZE: int
+  - DB_POOL_MAX_OVERFLOW: int
+  - DB_POOL_TIMEOUT: int
+  - ALLOWED_ORIGINS: str (comma-separated)
   - LOG_LEVEL: str
   - DEBUG: bool
 
@@ -54,6 +58,16 @@ RATE_LIMIT_MINUTES = int(os.getenv("RATE_LIMIT_MINUTES", "27"))
 RETENTION_DAYS = int(os.getenv("RETENTION_DAYS", "0"))  # 0 = disabled
 
 CREATE_ALL = os.getenv("CREATE_ALL", "false").strip().casefold() in __TRUE_SET
+
+DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "10"))
+DB_POOL_MAX_OVERFLOW = int(os.getenv("DB_POOL_MAX_OVERFLOW", "20"))
+DB_POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
+
+ALLOWED_ORIGINS: list[str] = [
+    o.strip()
+    for o in os.getenv("ALLOWED_ORIGINS", "").split(",")
+    if o.strip()
+]
 
 DEBUG = os.getenv("DEBUG", "false").strip().casefold() in __TRUE_SET
 

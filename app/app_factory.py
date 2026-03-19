@@ -12,15 +12,23 @@ from advanced_alchemy.extensions.litestar import (
     SQLAlchemyAsyncConfig,
     SQLAlchemyPlugin,
 )
+from advanced_alchemy.extensions.litestar.plugins.init.config.engine import (
+    EngineConfig,
+)
 from litestar import Litestar
+from litestar.config.cors import CORSConfig
 from litestar.contrib.opentelemetry import OpenTelemetryConfig
 from litestar.plugins.prometheus import PrometheusConfig, PrometheusController
 
 from .fact_inventory.retention import start_retention_task
 from .fact_inventory.versioned_routes import routes
 from .settings import (
+    ALLOWED_ORIGINS,
     CREATE_ALL,
     DATABASE_URI,
+    DB_POOL_MAX_OVERFLOW,
+    DB_POOL_SIZE,
+    DB_POOL_TIMEOUT,
     DEBUG,
     RATE_LIMIT_MINUTES,
     logger,
@@ -62,11 +70,22 @@ def create_app() -> Litestar:
         parsed.username,
         parsed.netloc,
     )
+
+    engine_config = EngineConfig()
+    if parsed.scheme and "sqlite" not in parsed.scheme:
+        engine_config = EngineConfig(
+            pool_size=DB_POOL_SIZE,
+            max_overflow=DB_POOL_MAX_OVERFLOW,
+            pool_timeout=DB_POOL_TIMEOUT,
+            pool_pre_ping=True,
+        )
+
     alchemy_config = SQLAlchemyAsyncConfig(
         connection_string=DATABASE_URI,
         before_send_handler="autocommit",
         session_config=AsyncSessionConfig(expire_on_commit=True),
         create_all=CREATE_ALL,  # True for testing; production uses Alembic
+        engine_config=engine_config,
     )
 
     # ------------------------------------------------------------------
@@ -74,6 +93,15 @@ def create_app() -> Litestar:
     # ------------------------------------------------------------------
     prometheus_config = PrometheusConfig(app_name="fact_inventory")
     otel_config = OpenTelemetryConfig()
+
+    # ------------------------------------------------------------------
+    # CORS policy
+    # ------------------------------------------------------------------
+    cors_config = CORSConfig(
+        allow_origins=ALLOWED_ORIGINS,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type"],
+    )
 
     # ------------------------------------------------------------------
     # Assemble the Litestar app config
@@ -86,6 +114,7 @@ def create_app() -> Litestar:
             prometheus_config.middleware,
             otel_config.middleware,
         ],
+        "cors_config": cors_config,
         "logging_config": logging_config,
         "debug": DEBUG,
         "on_startup": [_on_startup],
