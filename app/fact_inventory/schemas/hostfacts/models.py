@@ -3,7 +3,7 @@ We store our model schema here
 """
 
 from advanced_alchemy.base import UUIDAuditBase
-from sqlalchemy import JSON, Index, String, text
+from sqlalchemy import DDL, Index, JSON, String, event, text
 from sqlalchemy.dialects.postgresql import INET, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,7 +19,7 @@ class HostFacts(UUIDAuditBase):  # type: ignore[misc]
     However, these indexes have non-standard query syntax.
 
     You may be better off creating a virtual table/view with the parts
-    you intend to use.
+    you intend to use.  See docs/VIEWS.md for examples.
 
     This model is optimized for use with PostgreSQL and will create
     an index on the system_facts and package_facts JSON.
@@ -33,7 +33,12 @@ class HostFacts(UUIDAuditBase):  # type: ignore[misc]
 
     NOTE:
     This table will grow a lot in size and should be partitioned.
-    This management task is left to your DBA to design.
+    See docs/PARTITIONING.md for setup instructions.
+
+    NOTE:
+    A stored procedure for data retention is created automatically
+    on PostgreSQL when the table is first created.  Schedule it with
+    pg_cron as described in docs/RETENTION.md.
 
     Attributes:
         created_at: Timestamp when the record was created
@@ -92,3 +97,37 @@ class HostFacts(UUIDAuditBase):  # type: ignore[misc]
             f" created_at={self.created_at}"
             f" updated_at={self.updated_at}>"
         )
+
+
+# ----------------------------------------------------------------------
+# PostgreSQL stored procedure for data retention.
+#
+# Created automatically alongside the table (via create_all=True).
+# The DBA schedules it with pg_cron — see docs/RETENTION.md.
+#
+# Usage:  SELECT purge_stale_host_facts(90);   -- 90-day retention
+# ----------------------------------------------------------------------
+_purge_function_ddl = DDL(
+    """
+    CREATE OR REPLACE FUNCTION purge_stale_host_facts(retention_days integer)
+    RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE
+        deleted integer;
+    BEGIN
+        DELETE FROM host_facts
+         WHERE updated_at < (now() - make_interval(days => retention_days));
+
+        GET DIAGNOSTICS deleted = ROW_COUNT;
+        RAISE NOTICE 'purge_stale_host_facts: removed % row(s)', deleted;
+        RETURN deleted;
+    END;
+    $$;
+    """
+)
+event.listen(
+    HostFacts.__table__,
+    "after_create",
+    _purge_function_ddl.execute_if(dialect="postgresql"),
+)

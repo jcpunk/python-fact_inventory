@@ -79,13 +79,11 @@ uvicorn app_factory:create_app --factory --host 0.0.0.0 --port 8000
 
 ### Data Retention
 
-The tables will grow significantly over time. Consider implementing:
+The application does not delete records. Retention is handled at the database level using a stored procedure that the application creates automatically on PostgreSQL. Schedule it with a system cron job calling `psql`. See [docs/RETENTION.md](docs/RETENTION.md) for setup and examples.
 
-- Table partitioning
-- Retention policies to archive/delete old data
-- Regular vacuum operations for PostgreSQL
+### Table Partitioning
 
-Consult your DBA for production deployment strategies.
+For large networks (tens of thousands of hosts across IPv4 and IPv6), the `host_facts` table should be range-partitioned by `updated_at`. See [docs/PARTITIONING.md](docs/PARTITIONING.md) for setup instructions and automation with system cron.
 
 ### Logging
 

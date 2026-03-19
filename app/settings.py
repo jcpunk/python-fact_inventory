@@ -7,6 +7,7 @@ or you will get the `testing` environment
 Configurable elements (production):
   - DATABASE_URI: str
   - RATE_LIMIT_MINUTES: int
+  - RETENTION_DAYS: int
   - LOG_LEVEL: str
   - DEBUG: bool
 
@@ -48,6 +49,8 @@ if not DATABASE_URI:
     raise RuntimeError("DATABASE_URI environment variable is required")  # noqa: TRY003
 
 RATE_LIMIT_MINUTES = int(os.getenv("RATE_LIMIT_MINUTES", "27"))
+
+RETENTION_DAYS = int(os.getenv("RETENTION_DAYS", "0"))  # 0 = disabled
 
 DEBUG = os.getenv("DEBUG", "false").strip().casefold() in __TRUE_SET
 
