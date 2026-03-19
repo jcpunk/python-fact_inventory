@@ -6,7 +6,7 @@ from sqlalchemy import select
 from .models import HostFacts
 
 
-class HostFactsRepository(SQLAlchemyAsyncRepository[HostFacts]):  # type: ignore[misc]
+class HostFactsRepository(SQLAlchemyAsyncRepository[HostFacts]):
     """
     This is the database logic it should have some knowledge of how the
     database is setup, how to query it, and other behaviors that are not

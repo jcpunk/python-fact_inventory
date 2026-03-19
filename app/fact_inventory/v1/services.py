@@ -7,7 +7,7 @@ from ...settings import RATE_LIMIT_MINUTES
 from ..schemas.hostfacts import HostFacts, HostFactsRepository
 
 
-class HostFactsService(SQLAlchemyAsyncRepositoryService[HostFacts]):  # type: ignore[misc]
+class HostFactsService(SQLAlchemyAsyncRepositoryService[HostFacts]):
     """
     This is the "business logic" for our object.
 

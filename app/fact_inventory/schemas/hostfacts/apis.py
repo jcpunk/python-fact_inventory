@@ -11,7 +11,7 @@ from pydantic import field_validator
 from .models import HostFacts
 
 
-class HostFactsWriteAPI(SQLAlchemyDTO[HostFacts]):  # type: ignore[misc]
+class HostFactsWriteAPI(SQLAlchemyDTO[HostFacts]):
     """What API endpoints should HostFacts expose for writing"""
 
     config = SQLAlchemyDTOConfig(
@@ -24,7 +24,7 @@ class HostFactsWriteAPI(SQLAlchemyDTO[HostFacts]):  # type: ignore[misc]
         forbid_unknown_fields=True,  # Error out on unknown/extra fields
     )
 
-    @field_validator("system_facts", "package_facts")  # type: ignore[misc]
+    @field_validator("system_facts", "package_facts")
     @classmethod
     def validate_json_size(cls, v: dict[str, Any]) -> dict[str, Any]:
         # https://github.com/orgs/litestar-org/discussions/4351

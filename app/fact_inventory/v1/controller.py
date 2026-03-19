@@ -1,4 +1,4 @@
-from typing import Annotated, ClassVar
+from typing import Annotated, Any, ClassVar
 
 from litestar import Controller, Request, Response, post
 from litestar.exceptions import HTTPException
@@ -22,24 +22,24 @@ from ..schemas.hostfacts import HostFacts, HostFactsWriteAPI
 from .services import HostFactsService
 
 
-class DetailResponse(BaseModel):  # type: ignore[misc]
+class DetailResponse(BaseModel):
     """A simple model that just has a detail string"""
 
     detail: str
 
 
-class HostFactController(Controller):  # type: ignore[misc]
+class HostFactController(Controller):
     """
     REST API controller for handling fact submissions.
     """
 
-    path: ClassVar[str] = "/facts"  # URL to expose
-    tags: ClassVar[list[str]] = ["v1"]  # OpenAPI Grouping of the API endpoints
+    path: ClassVar[str] = "/facts"  # type: ignore[misc]
+    tags: ClassVar[list[str]] = ["v1"]  # type: ignore[misc]
 
     # This hard coded value is guess work
-    request_max_body_size: ClassVar[int] = 1024 * 1024 * 9  # value in bytes
+    request_max_body_size: ClassVar[int] = 1024 * 1024 * 9  # type: ignore[misc]
 
-    @post(  # type: ignore[misc]
+    @post(
         "",
         dto=HostFactsWriteAPI,
         description="Submit system and package facts",
@@ -164,9 +164,9 @@ class HostFactController(Controller):  # type: ignore[misc]
                 ]
             ),
         ],
-        request: Request,
+        request: Request[Any, Any, Any],
         db_session: AsyncSession,
-    ) -> Response:
+    ) -> Response[Any]:
         """
         Perform the actual insertion into the database.
 
@@ -174,6 +174,11 @@ class HostFactController(Controller):  # type: ignore[misc]
 
         Parameters are automatically checked for sanity by this point.
         """
+        if request.client is None:
+            raise HTTPException(
+                detail="Unable to determine client address",
+                status_code=HTTP_400_BAD_REQUEST,
+            )
         client_address = request.client.host
         logger.info("Facts submission from %s", client_address)
 

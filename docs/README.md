@@ -7,6 +7,10 @@ The service includes rate limiting to prevent abuse and can use PostgreSQL with 
 ## Features
 
 - **Rate Limiting**: Per-IP rate limiting to prevent abuse (configurable interval)
+- **Data Retention**: Background purge of stale records via a stored procedure (configurable, PostgreSQL only)
+- **Health Check**: `GET /v1/healthz` endpoint for container orchestrators and load balancers
+- **Prometheus Metrics**: `GET /metrics` endpoint for scraping HTTP request metrics
+- **OpenTelemetry Tracing**: Automatic distributed tracing spans on every request
 - **PostgreSQL Optimized**: Uses `JSONB` fields with `GIN` indexes for efficient querying
 - **Async Architecture**: Built on SQLAlchemy async and Litestar for high performance
 - **Type Safety**: Full type annotations with Pydantic validation
@@ -54,6 +58,7 @@ export RUNTIME=testing     # loads .env.testing (default)
 
 - **DATABASE_URI**: Database connection string (required) - PostgreSQL recommended
 - **RATE_LIMIT_MINUTES**: Minutes between allowed submissions per IP (default: 27)
+- **RETENTION_DAYS**: Days to keep records before the background purge removes them (default: 0 = disabled, PostgreSQL only)
 - **DEBUG**: Enable debug mode and OpenAPI docs (default: false)
 - **LOG_LEVEL**: Logging level - DEBUG, INFO, WARNING, ERROR (default: INFO)
 
@@ -65,6 +70,7 @@ DATABASE_URI=postgresql+asyncpg://user:password@localhost/dbname
 
 # Optional (with defaults)
 RATE_LIMIT_MINUTES=27
+RETENTION_DAYS=0
 DEBUG=false
 LOG_LEVEL=INFO
 ```
@@ -79,11 +85,15 @@ uvicorn app_factory:create_app --factory --host 0.0.0.0 --port 8000
 
 ### Data Retention
 
-The application does not delete records. Retention is handled at the database level using a stored procedure that the application creates automatically on PostgreSQL. Schedule it with a system cron job calling `psql`. See [docs/RETENTION.md](docs/RETENTION.md) for setup and examples.
+When `RETENTION_DAYS` is set to a value greater than 0 and the database is PostgreSQL, the application runs an internal background task that periodically calls a stored procedure to remove records whose `updated_at` is older than the retention window. No external scheduler or cron daemon is required. See [docs/RETENTION.md](docs/RETENTION.md) for details on the stored procedure and manual usage.
 
 ### Table Partitioning
 
 For large networks (tens of thousands of hosts across IPv4 and IPv6), the `host_facts` table should be range-partitioned by `updated_at`. See [docs/PARTITIONING.md](docs/PARTITIONING.md) for setup instructions and automation with system cron.
+
+### Health Check
+
+The `GET /v1/healthz` endpoint verifies the application can reach the database. Use it as the liveness or readiness probe in your container orchestrator.
 
 ### Logging
 
@@ -96,11 +106,11 @@ Logs are sent to `stdout` by default and include:
 
 ## Example client usage:
 
-See `gather_facts.yaml`
+See `gather_facts.yml`
 
 ## Querying JSON Data (PostgreSQL)
 
-With `GIN` indexes on `JSONB` fields, you can efficiently query facts and build views.
+With `GIN` indexes on `JSONB` fields, you can efficiently query facts and build views. See [docs/VIEWS.md](docs/VIEWS.md) for ready-to-use `CREATE VIEW` examples covering host overview, package inventory, distribution summary, and stale host detection.
 
 ## Security Considerations
 

@@ -2,13 +2,15 @@
 We store our model schema here
 """
 
+from typing import Any
+
 from advanced_alchemy.base import UUIDAuditBase
-from sqlalchemy import DDL, Index, JSON, String, event, text
+from sqlalchemy import DDL, JSON, Index, String, event, text
 from sqlalchemy.dialects.postgresql import INET, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 
-class HostFacts(UUIDAuditBase):  # type: ignore[misc]
+class HostFacts(UUIDAuditBase):
     """
     Database model for storing host information and facts.
 
@@ -57,14 +59,14 @@ class HostFacts(UUIDAuditBase):  # type: ignore[misc]
         comment="Client IP address (IPv4 or IPv6)",
     )
 
-    system_facts: Mapped[dict] = mapped_column(
+    system_facts: Mapped[dict[str, Any]] = mapped_column(
         JSON().with_variant(JSONB, "postgresql"),
         server_default=text("'{}'"),
         nullable=False,
         comment="System facts as JSON",
     )
 
-    package_facts: Mapped[dict] = mapped_column(
+    package_facts: Mapped[dict[str, Any]] = mapped_column(
         JSON().with_variant(JSONB, "postgresql"),
         server_default=text("'{}'"),
         nullable=False,
@@ -107,7 +109,7 @@ class HostFacts(UUIDAuditBase):  # type: ignore[misc]
 #
 # Usage:  SELECT purge_stale_host_facts(90);   -- 90-day retention
 # ----------------------------------------------------------------------
-_purge_function_ddl = DDL(
+_purge_function_ddl = DDL(  # type: ignore[no-untyped-call]
     """
     CREATE OR REPLACE FUNCTION purge_stale_host_facts(retention_days integer)
     RETURNS integer

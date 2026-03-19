@@ -18,7 +18,14 @@ def validate_ip_middleware(app: ASGIApp) -> ASGIApp:
     """
 
     async def middleware(scope: Scope, receive: Receive, send: Send) -> None:
-        request = Request(scope, receive, send)
+        request: Request = Request(scope, receive, send)  # type: ignore[type-arg]
+
+        if request.client is None:
+            raise HTTPException(
+                detail="Unable to determine client address",
+                status_code=HTTP_400_BAD_REQUEST,
+            )
+
         client_ip = request.client.host
 
         # Skip validation for Litestar test clients

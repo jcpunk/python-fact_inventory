@@ -7,6 +7,7 @@ We can version each API and expose them from here
 from litestar import Router
 
 from .v1.controller import HostFactController as HostFactController_v1
+from .v1.health_controller import HealthController as HealthController_v1
 
 # ----------------------------------------------------------------------
 # v1 - current stable API endpoint
@@ -14,7 +15,7 @@ from .v1.controller import HostFactController as HostFactController_v1
 # ----------------------------------------------------------------------
 v1_route: Router = Router(
     path="/v1",
-    route_handlers=[HostFactController_v1],
+    route_handlers=[HostFactController_v1, HealthController_v1],
 )
 
 routes: list[Router] = [v1_route]
