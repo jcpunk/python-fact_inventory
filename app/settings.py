@@ -8,6 +8,7 @@ Configurable elements (production):
   - DATABASE_URI: str
   - RATE_LIMIT_MINUTES: int
   - RETENTION_DAYS: int
+  - CREATE_ALL: bool
   - LOG_LEVEL: str
   - DEBUG: bool
 
@@ -51,6 +52,8 @@ if not DATABASE_URI:
 RATE_LIMIT_MINUTES = int(os.getenv("RATE_LIMIT_MINUTES", "27"))
 
 RETENTION_DAYS = int(os.getenv("RETENTION_DAYS", "0"))  # 0 = disabled
+
+CREATE_ALL = os.getenv("CREATE_ALL", "false").strip().casefold() in __TRUE_SET
 
 DEBUG = os.getenv("DEBUG", "false").strip().casefold() in __TRUE_SET
 

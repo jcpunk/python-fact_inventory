@@ -18,7 +18,14 @@ from litestar.plugins.prometheus import PrometheusConfig, PrometheusController
 
 from .fact_inventory.retention import start_retention_task
 from .fact_inventory.versioned_routes import routes
-from .settings import DATABASE_URI, DEBUG, RATE_LIMIT_MINUTES, logger, logging_config
+from .settings import (
+    CREATE_ALL,
+    DATABASE_URI,
+    DEBUG,
+    RATE_LIMIT_MINUTES,
+    logger,
+    logging_config,
+)
 from .validate_ip import validate_ip_middleware
 
 
@@ -59,7 +66,7 @@ def create_app() -> Litestar:
         connection_string=DATABASE_URI,
         before_send_handler="autocommit",
         session_config=AsyncSessionConfig(expire_on_commit=True),
-        create_all=True,  # One day you may want alembic - and to change this
+        create_all=CREATE_ALL,  # True for testing; production uses Alembic
     )
 
     # ------------------------------------------------------------------

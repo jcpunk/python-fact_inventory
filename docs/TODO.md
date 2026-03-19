@@ -1,6 +1,6 @@
 # Database
 
-- [ ] Convert to `alembic` integrations provided by `advanced_alchemy`
+- [x] Convert to `alembic` integrations provided by `advanced_alchemy` (see docs/ALEMBIC.md)
 - [x] Develop partitioning plan/recommendations (see docs/PARTITIONING.md)
 - [x] Develop retention plan/recommendations (see docs/RETENTION.md)
 - [x] Create example SQL views (see docs/VIEWS.md)

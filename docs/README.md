@@ -43,7 +43,13 @@ uv sync
 
 3. Configure environment variables (see Configuration section)
 
-4. In version 1 of the application, the database tables are automatically created if missing.
+4. Apply database migrations:
+
+```bash
+RUNTIME=production alembic upgrade head
+```
+
+See [docs/ALEMBIC.md](docs/ALEMBIC.md) for full migration documentation.
 
 ## Configuration
 
