@@ -17,8 +17,8 @@ from app.fact_inventory.routes import route_handlers
 Router(path="/fact_inventory", route_handlers=route_handlers)
 ```
 
-The `APP_NAME` setting (default `fact_inventory`) controls the prefix used by
-the bundled application factory, producing the paths shown below.
+The `FACT_INVENTORY_PREFIX` setting (default `fact_inventory`) controls the
+prefix used by the bundled application factory, producing the paths shown below.
 
 ### Unversioned routes
 
@@ -32,7 +32,7 @@ database-layer dependencies beyond the readiness probe:
 
 ### /{prefix}/v1
 
-- **Controller Layer** (`v1/controller.py`): HTTP endpoint handlers with request validation
+- **Controller Layer** (`v1/controller.py`): HTTP endpoint handlers with request validation. Rate limiting is handled externally by Litestar's `RateLimitMiddleware`; the controller is responsible only for validation and persistence.
 - **Service Layer** (`v1/services.py`): Business logic without database specific behavior
 
 #### /{prefix}/v1/facts
@@ -59,13 +59,21 @@ database-layer dependencies beyond the readiness probe:
 - `429 TOO MANY REQUESTS`: Rate limit exceeded
 - `500 INTERNAL SERVER ERROR`: Other errors
 
-**Rate Limit Response**:
+**Rate Limiting**:
+
+Rate limiting is handled by Litestar's built-in `RateLimitMiddleware`,
+configured on the `fact_inventory` router. Health and readiness probes are
+excluded from rate limiting via path patterns. The middleware uses an in-memory
+store; rate-limit state resets on server restart.
 
 ```
-Rate limit exceeded. Wait 28 minutes.
+HTTP/1.1 429 Too Many Requests
+RateLimit-Limit: 1
+RateLimit-Remaining: 0
+RateLimit-Reset: <seconds>
 ```
 
-Headers include `Retry-After` in seconds.
+Standard `RateLimit-*` response headers are included on every response.
 
 ##### Example with curl
 
@@ -109,3 +117,24 @@ Clients are organized by the IP address they use to connect to the endpoint and 
 - `ix_host_facts_client_address_updated_at`: Multi column index for quickly finding client update time
 - `ix_host_facts_system_facts`: GIN index for PostgreSQL JSON queries, useless on other databases
 - `ix_host_facts_package_facts`: GIN index for PostgreSQL JSON queries, useless on other databases
+
+## Plugins
+
+### DailyCleanupPlugin
+
+The `DailyCleanupPlugin` implements Litestar's `InitPluginProtocol` to manage
+a periodic background task that enforces data retention. It uses `lifespan`
+context managers so startup and shutdown are handled in a single,
+self-contained block.
+
+- Runs `purge_expired_hosts()` to delete records with an `updated_at` older
+  than `RETENTION_DAYS` (default 365).
+- The cleanup interval is controlled by `CLEANUP_INTERVAL_HOURS` (default 24).
+- The first cleanup run is deferred until after the first sleep interval,
+  so the plugin never blocks application startup.
+- Exceptions inside the cleanup function are logged but do not crash the loop;
+  the plugin retries on the next interval.
+
+The plugin is self-contained within the `fact_inventory` sub-application
+(`app/fact_inventory/plugins/cleanup.py`) and is wired into the host
+application by the application factory.

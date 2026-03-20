@@ -5,9 +5,9 @@
 
 # Application
 
-- [ ] Add health check endpoint for container orchestrators
+- [x] Add health check endpoint for container orchestrators
 - [ ] Guard Prometheus endpoint against abuse
-- [ ] Add internal background retention task (no external scheduler needed)
+- [x] Add internal background retention task (no external scheduler needed)
 
 # Repository
 

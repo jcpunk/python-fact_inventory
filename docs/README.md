@@ -6,7 +6,8 @@ The service includes rate limiting to prevent abuse and can use PostgreSQL with 
 
 ## Features
 
-- **Rate Limiting**: Per-IP rate limiting to prevent abuse (configurable interval)
+- **Rate Limiting**: Per-IP rate limiting via Litestar's built-in `RateLimitMiddleware` (configurable unit and max requests)
+- **Automatic Data Retention**: Background `DailyCleanupPlugin` purges records older than `RETENTION_DAYS`
 - **PostgreSQL Optimized**: Uses `JSONB` fields with `GIN` indexes for efficient querying
 - **Async Architecture**: Built on SQLAlchemy async and Litestar for high performance
 - **Type Safety**: Full type annotations with Pydantic validation
@@ -53,14 +54,19 @@ export RUNTIME=testing     # loads .env.testing (default)
 ### Environment Variables
 
 - **DATABASE_URI**: Database connection string (required) - PostgreSQL recommended
-- **RATE_LIMIT_MINUTES**: Minutes between allowed submissions per IP (default: 27)
-- **CREATE_ALL**: Auto-create tables on startup, bypassing Alembic (default: false)
-- **DB_POOL_SIZE**: Database connection pool size (default: 10, PostgreSQL only)
-- **DB_POOL_MAX_OVERFLOW**: Max connections above pool size (default: 20, PostgreSQL only)
-- **DB_POOL_TIMEOUT**: Seconds to wait for a connection from the pool (default: 30, PostgreSQL only)
+- **APP_NAME**: Application name used in metrics and OpenAPI docs (default: `host_inventory`)
+- **FACT_INVENTORY_PREFIX**: URL prefix for the fact_inventory sub-app (default: `fact_inventory`)
+- **RATE_LIMIT_UNIT**: Time unit for rate limiting — `second`, `minute`, `hour`, or `day` (default: `hour`)
+- **RATE_LIMIT_MAX_REQUESTS**: Maximum requests allowed per rate limit unit (default: `1`)
+- **RETENTION_DAYS**: Days to retain host records before automatic purge (default: `365`)
+- **CLEANUP_INTERVAL_HOURS**: Hours between background cleanup runs (default: `24`)
+- **CREATE_ALL**: Auto-create tables on startup, bypassing Alembic (default: `true`)
+- **DB_POOL_SIZE**: Database connection pool size (default: `10`, PostgreSQL only)
+- **DB_POOL_MAX_OVERFLOW**: Max connections above pool size (default: `20`, PostgreSQL only)
+- **DB_POOL_TIMEOUT**: Seconds to wait for a connection from the pool (default: `30`, PostgreSQL only)
 - **ALLOWED_ORIGINS**: Comma-separated list of allowed CORS origins (default: none)
-- **DEBUG**: Enable debug mode and OpenAPI docs (default: false)
-- **LOG_LEVEL**: Logging level - DEBUG, INFO, WARNING, ERROR (default: INFO)
+- **DEBUG**: Enable debug mode and OpenAPI docs (default: `false`)
+- **LOG_LEVEL**: Logging level - DEBUG, INFO, WARNING, ERROR (default: `INFO`)
 
 Create a `.env.{RUNTIME}` file with:
 
@@ -69,7 +75,11 @@ Create a `.env.{RUNTIME}` file with:
 DATABASE_URI=postgresql+asyncpg://user:password@localhost/dbname
 
 # Optional (with defaults)
-RATE_LIMIT_MINUTES=27
+RATE_LIMIT_UNIT=hour
+RATE_LIMIT_MAX_REQUESTS=1
+RETENTION_DAYS=365
+CLEANUP_INTERVAL_HOURS=24
+CREATE_ALL=true
 DB_POOL_SIZE=10
 DB_POOL_MAX_OVERFLOW=20
 DB_POOL_TIMEOUT=30
@@ -88,13 +98,16 @@ uvicorn app_factory:create_app --factory --host 0.0.0.0 --port 8000
 
 ### Data Retention
 
-The tables will grow significantly over time. Consider implementing:
+The application includes an automatic background cleanup task
+(`DailyCleanupPlugin`) that periodically purges host records older than
+`RETENTION_DAYS` (default 365). The cleanup runs every `CLEANUP_INTERVAL_HOURS`
+(default 24). The first run is deferred until after the first interval to avoid
+impacting startup.
+
+For additional capacity planning, consider:
 
 - Table partitioning
-- Retention policies to archive/delete old data
 - Regular vacuum operations for PostgreSQL
-
-Consult your DBA for production deployment strategies.
 
 ### Logging
 
