@@ -16,33 +16,19 @@ from advanced_alchemy.extensions.litestar.plugins.init.config.engine import (
     EngineConfig,
 )
 from litestar import Litestar
-from litestar.config.cors import CORSConfig
 from litestar.contrib.opentelemetry import OpenTelemetryConfig
 from litestar.di import Provide
 from litestar.openapi.config import OpenAPIConfig
 from litestar.plugins.prometheus import PrometheusConfig, PrometheusController
 
 from .fact_inventory.routes import routes
-from .settings import (
-    ALLOWED_ORIGINS,
-    CREATE_ALL,
-    DATABASE_URI,
-    DB_POOL_MAX_OVERFLOW,
-    DB_POOL_SIZE,
-    DB_POOL_TIMEOUT,
-    DEBUG,
-    NAME,
-    RATE_LIMIT_MINUTES,
-    VERSION,
-    logger,
-    logging_config,
-)
+from .settings import NAME, logger, logging_config, settings
 from .validate_ip import validate_ip_middleware
 
 
 def _get_rate_limit_minutes() -> int:
     """Provide the configured rate-limit window to fact_inventory's DI system."""
-    return RATE_LIMIT_MINUTES
+    return settings.rate_limit_minutes
 
 
 async def _on_startup(app: Litestar) -> None:
@@ -71,7 +57,7 @@ def create_app() -> Litestar:
     # ------------------------------------------------------------------
     # Database plugin setup
     # ------------------------------------------------------------------
-    parsed = urlparse(DATABASE_URI)
+    parsed = urlparse(settings.database_uri)
     logger.info(
         "Configuring for database: %s://%s@%s",
         parsed.scheme,
@@ -82,27 +68,18 @@ def create_app() -> Litestar:
     engine_config = EngineConfig()
     if parsed.scheme and "sqlite" not in parsed.scheme:
         engine_config = EngineConfig(
-            pool_size=DB_POOL_SIZE,
-            max_overflow=DB_POOL_MAX_OVERFLOW,
-            pool_timeout=DB_POOL_TIMEOUT,
+            pool_size=settings.db_pool_size,
+            max_overflow=settings.db_pool_max_overflow,
+            pool_timeout=settings.db_pool_timeout,
             pool_pre_ping=True,
         )
 
     alchemy_config = SQLAlchemyAsyncConfig(
         engine_config=engine_config,
-        connection_string=DATABASE_URI,
+        connection_string=settings.database_uri,
         before_send_handler="autocommit",
         session_config=AsyncSessionConfig(expire_on_commit=True),
-        create_all=CREATE_ALL,
-    )
-
-    # ------------------------------------------------------------------
-    # CORS policy
-    # ------------------------------------------------------------------
-    cors_config = CORSConfig(
-        allow_origins=ALLOWED_ORIGINS,
-        allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type"],
+        create_all=settings.create_all,
     )
 
     # ------------------------------------------------------------------
@@ -129,18 +106,17 @@ def create_app() -> Litestar:
         ],
         "on_startup": [_on_startup],
         "on_shutdown": [_on_shutdown],
-        "cors_config": cors_config,
         "logging_config": logging_config,
-        "debug": DEBUG,
+        "debug": settings.debug,
     }
 
     # ------------------------------------------------------------------
     # OpenAPI docs are enabled in debug mode
     # ------------------------------------------------------------------
-    if DEBUG:
+    if settings.debug:
         app_config["openapi_config"] = OpenAPIConfig(
             title=NAME,
-            version=VERSION,
+            version=settings.version,
         )
         logger.warning("OpenAPI documentation enabled (debug mode)")
     else:
@@ -150,5 +126,10 @@ def create_app() -> Litestar:
     # ------------------------------------------------------------------
     # Setup the Litestar app
     # ------------------------------------------------------------------
-    logger.info("%s service starting (rate limit %s min)", NAME, RATE_LIMIT_MINUTES)
+    logger.info(
+        "%s version %s starting (rate limit %s min)",
+        NAME,
+        settings.version,
+        settings.rate_limit_minutes,
+    )
     return Litestar(**app_config)

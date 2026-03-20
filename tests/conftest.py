@@ -66,7 +66,6 @@ async def db_session(
 
 @pytest.fixture
 async def app(
-    db_session: AsyncSession,  # noqa: ARG001
     monkeypatch: pytest.MonkeyPatch,
 ) -> Litestar:
     """Create a Litestar app instance with mocked database."""

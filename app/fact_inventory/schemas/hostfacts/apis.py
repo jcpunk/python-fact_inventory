@@ -11,6 +11,13 @@ from pydantic import field_validator
 from .models import HostFacts
 
 
+class _FieldSizeError(ValueError):
+    """Raised when a JSON field exceeds the maximum permitted byte size."""
+
+    def __init__(self, max_bytes: int) -> None:
+        super().__init__(f"JSON field exceeds maximum size of {max_bytes} bytes")
+
+
 class HostFactsWriteAPI(SQLAlchemyDTO[HostFacts]):
     """What API endpoints should HostFacts expose for writing"""
 
@@ -32,8 +39,6 @@ class HostFactsWriteAPI(SQLAlchemyDTO[HostFacts]):
         max_size_bytes = 1024 * 1024 * 4  # This hard coded value is guess work
 
         if len(json_str.encode("utf-8")) > max_size_bytes:
-            raise ValueError(  # noqa: TRY003
-                f"JSON field exceeds maximum size of {max_size_bytes} bytes"
-            )
+            raise _FieldSizeError(max_size_bytes)
 
         return v

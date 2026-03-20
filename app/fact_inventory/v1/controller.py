@@ -171,6 +171,7 @@ class HostFactController(Controller):
         ],
         request: Request[Any, Any, Any],
         db_session: AsyncSession,
+        # Default 27 is the standalone fallback; host apps override via Provide.
         rate_limit_minutes: Annotated[int, Dependency()] = 27,
     ) -> Response[Any]:
         """

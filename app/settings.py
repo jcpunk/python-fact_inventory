@@ -4,18 +4,24 @@ Load application configuration from environment variables and .env files.
 Set the RUNTIME environment variable to select `.env.${RUNTIME}`;
 defaults to the ``testing`` environment when unset.
 
-Configurable elements (production):
-  - DATABASE_URI: str
-  - RATE_LIMIT_MINUTES: int
-  - CREATE_ALL: bool
-  - DB_POOL_SIZE: int
-  - DB_POOL_MAX_OVERFLOW: int
-  - DB_POOL_TIMEOUT: int
-  - ALLOWED_ORIGINS: str (comma-separated)
-  - LOG_LEVEL: str
-  - DEBUG: bool
+All configuration is exposed through the module-level ``settings`` instance.
+Consumers should import and use that object directly::
 
-Additional Configurable elements (for development with uvicorn):
+    from .settings import settings
+    uri = settings.database_uri
+
+Configurable elements (production):
+  - DATABASE_URI: str          (required)
+  - RATE_LIMIT_MINUTES: int    (default 27)
+  - CREATE_ALL: bool           (default True)
+  - DB_POOL_SIZE: int          (default 10)
+  - DB_POOL_MAX_OVERFLOW: int  (default 20)
+  - DB_POOL_TIMEOUT: int       (default 30)
+  - LOG_LEVEL: str             (default "INFO"; overridden to "DEBUG" when DEBUG=true)
+  - DEBUG: bool                (default False)
+  - VERSION: str               (default: package metadata → git commit → "unknown")
+
+Additional configurable elements (for development with uvicorn):
   - HOST: str = see main.py
   - PORT: int = see main.py
 """
@@ -24,25 +30,54 @@ from __future__ import annotations
 
 import logging
 import os
-from importlib.metadata import PackageNotFoundError, version
+import shutil
+import subprocess
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _package_version
 from pathlib import Path
 
 from litestar.logging import LoggingConfig
-from pydantic import Field, field_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # ----------------------------------------------------------------------
-# Constants
+# Application name — identity constant, not configurable at runtime
 # ----------------------------------------------------------------------
 NAME = "fact_inventory"
 
-try:
-    VERSION: str = version("fact-inventory")
-except PackageNotFoundError:
-    VERSION = "0.0.0+unknown"
-
 RUNTIME = os.getenv("RUNTIME", "testing")
 _ENV_FILE = Path(f".env.{RUNTIME}")
+
+
+def _get_version() -> str:
+    """Determine the application version via three fallback sources.
+
+    1. Installed package metadata (``importlib.metadata``).
+    2. Current git commit short-hash (``git rev-parse --short HEAD``).
+    3. The literal string ``"unknown"``.
+    """
+    try:
+        return _package_version("fact-inventory")
+    except PackageNotFoundError:
+        pass
+
+    git = shutil.which("git")
+    if git is not None:
+        try:
+            # All arguments are controlled: `git` is a fully-resolved path from
+            # shutil.which() and the remaining args are literals, so there is no
+            # untrusted input here.  S603 is suppressed accordingly.
+            result = subprocess.run(  # noqa: S603
+                [git, "rev-parse", "--short", "HEAD"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            return f"git-{result.stdout.strip()}"
+        except subprocess.CalledProcessError:
+            pass
+
+    return "unknown"
 
 
 # ----------------------------------------------------------------------
@@ -58,50 +93,34 @@ class Settings(BaseSettings):
         populate_by_name=True,
     )
 
-    database_uri: str = Field(...)  # required — no default
+    database_uri: str = Field(...)
     rate_limit_minutes: int = 27
     create_all: bool = True
     db_pool_size: int = 10
     db_pool_max_overflow: int = 20
     db_pool_timeout: int = 30
-    allowed_origins: list[str] = []
     log_level: str = "INFO"
     debug: bool = False
+    version: str = Field(default_factory=_get_version)
 
-    @field_validator("allowed_origins", mode="before")
-    @classmethod
-    def _split_origins(cls, v: object) -> list[str]:
-        """Accept a comma-separated string or a list of strings."""
-        if isinstance(v, str):
-            return [o.strip() for o in v.split(",") if o.strip()]
-        if isinstance(v, list):
-            return [str(item) for item in v]
-        msg = f"allowed_origins must be a string or list, got {type(v).__name__}"
-        raise TypeError(msg)
+    @model_validator(mode="after")
+    def _apply_debug_log_level(self) -> Settings:
+        """Force log_level to DEBUG whenever debug mode is enabled."""
+        if self.debug:
+            self.log_level = "DEBUG"
+        return self
 
-
-_settings = Settings()
 
 # ----------------------------------------------------------------------
-# Module-level exports used throughout the application
+# Application-wide settings singleton
 # ----------------------------------------------------------------------
-DATABASE_URI: str = _settings.database_uri
-RATE_LIMIT_MINUTES: int = _settings.rate_limit_minutes
-CREATE_ALL: bool = _settings.create_all
-DB_POOL_SIZE: int = _settings.db_pool_size
-DB_POOL_MAX_OVERFLOW: int = _settings.db_pool_max_overflow
-DB_POOL_TIMEOUT: int = _settings.db_pool_timeout
-ALLOWED_ORIGINS: list[str] = _settings.allowed_origins
-DEBUG: bool = _settings.debug
-
-# DEBUG mode always uses DEBUG-level logging.
-LOG_LEVEL: str = "DEBUG" if DEBUG else _settings.log_level
+settings = Settings()
 
 # ----------------------------------------------------------------------
-# Logging configuration
+# Logging infrastructure — built from the resolved settings
 # ----------------------------------------------------------------------
 logging_config = LoggingConfig(
-    root={"level": logging.getLevelName(LOG_LEVEL), "handlers": ["console"]},
+    root={"level": logging.getLevelName(settings.log_level), "handlers": ["console"]},
     formatters={
         "standard": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"}
     },
