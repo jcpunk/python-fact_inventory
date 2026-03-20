@@ -93,6 +93,48 @@ class TestReadinessCheck:
         assert "sql" not in detail
         assert "select" not in detail
 
+    async def test_ready_patch_not_allowed(self, client: AsyncTestClient) -> None:
+        """Only GET is allowed; PATCH must be rejected."""
+        response = await client.patch("/fact_inventory/ready")
+        assert response.status_code == HTTP_405_METHOD_NOT_ALLOWED
+
+    async def test_ready_503_content_type_is_json(
+        self, client: AsyncTestClient
+    ) -> None:
+        """503 response must be JSON, not plain text or HTML."""
+        with patch(
+            "sqlalchemy.ext.asyncio.AsyncSession.execute",
+            new_callable=AsyncMock,
+            side_effect=Exception("db unavailable"),
+        ):
+            response = await client.get("/fact_inventory/ready")
+        assert "application/json" in response.headers["content-type"]
+
+    async def test_ready_503_has_only_detail_key(
+        self, client: AsyncTestClient
+    ) -> None:
+        """503 body must contain standard Litestar error keys only."""
+        with patch(
+            "sqlalchemy.ext.asyncio.AsyncSession.execute",
+            new_callable=AsyncMock,
+            side_effect=Exception("db unavailable"),
+        ):
+            response = await client.get("/fact_inventory/ready")
+        assert set(response.json().keys()) == {"detail", "status_code"}
+
+    async def test_ready_original_exception_not_leaked(
+        self, client: AsyncTestClient
+    ) -> None:
+        """The original exception message must not appear in the 503 response."""
+        secret_message = "super_secret_internal_error_xyz"
+        with patch(
+            "sqlalchemy.ext.asyncio.AsyncSession.execute",
+            new_callable=AsyncMock,
+            side_effect=Exception(secret_message),
+        ):
+            response = await client.get("/fact_inventory/ready")
+        assert secret_message not in response.text
+
     async def test_ready_repeated_calls_consistent(
         self,
         client: AsyncTestClient,

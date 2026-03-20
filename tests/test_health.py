@@ -2,6 +2,8 @@
 Tests for the unversioned /fact_inventory/health endpoint.
 """
 
+from unittest.mock import AsyncMock, patch
+
 from litestar.status_codes import HTTP_200_OK, HTTP_405_METHOD_NOT_ALLOWED
 from litestar.testing import AsyncTestClient
 
@@ -49,6 +51,11 @@ class TestHealthCheck:
         response = await client.delete("/fact_inventory/health")
         assert response.status_code == HTTP_405_METHOD_NOT_ALLOWED
 
+    async def test_health_patch_not_allowed(self, client: AsyncTestClient) -> None:
+        """Only GET is allowed; PATCH must be rejected."""
+        response = await client.patch("/fact_inventory/health")
+        assert response.status_code == HTTP_405_METHOD_NOT_ALLOWED
+
     async def test_health_is_reachable_without_auth(
         self, client: AsyncTestClient
     ) -> None:
@@ -65,3 +72,15 @@ class TestHealthCheck:
             response = await client.get("/fact_inventory/health")
             assert response.status_code == HTTP_200_OK
             assert response.json() == {"status": "ok", "service": "fact_inventory"}
+
+    async def test_health_independent_of_db_failure(
+        self, client: AsyncTestClient
+    ) -> None:
+        """Liveness probe must return 200 even when a DB dependency fails."""
+        with patch(
+            "sqlalchemy.ext.asyncio.AsyncSession.execute",
+            new_callable=AsyncMock,
+            side_effect=Exception("simulated failure"),
+        ):
+            response = await client.get("/fact_inventory/health")
+        assert response.status_code == HTTP_200_OK

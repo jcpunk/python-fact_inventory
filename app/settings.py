@@ -77,9 +77,10 @@ def _get_version(package_name: str) -> str:
             capture_output=True,
             text=True,
             check=True,
+            timeout=5,
         )
         return f"git-{result.stdout.strip()}"
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
         _log.debug("git rev-parse failed; cannot fall back to commit hash")
 
     return "unknown"
@@ -99,7 +100,7 @@ class Settings(BaseSettings):
     )
 
     database_uri: str = Field(...)
-    app_name: str = "host_info"
+    app_name: str = "fact_inventory"
     fact_inventory_prefix: str = "fact_inventory"
     rate_limit_minutes: int = 27
     create_all: bool = True
