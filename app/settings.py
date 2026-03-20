@@ -20,7 +20,7 @@ Configurable elements (production):
   - DB_POOL_TIMEOUT: int       (default 30)
   - LOG_LEVEL: str             (default "INFO"; overridden to "DEBUG" when DEBUG=true)
   - DEBUG: bool                (default False)
-  - VERSION: str               (default: package metadata for APP_NAME → git commit →
+  - VERSION: str               (default: package metadata for APP_NAME -> git commit ->
                                 "unknown")
 
 Additional configurable elements (for development with uvicorn):
@@ -46,15 +46,15 @@ RUNTIME = os.getenv("RUNTIME", "testing")
 _ENV_FILE = Path(f".env.{RUNTIME}")
 
 
-def _get_version() -> str:
+def _get_version(package_name: str) -> str:
     """Determine the application version via three fallback sources.
 
-    1. Installed package metadata (``importlib.metadata``).
+    1. Installed package metadata (``importlib.metadata``) for *package_name*.
     2. Current git commit short-hash (``git rev-parse --short HEAD``).
     3. The literal string ``"unknown"``.
     """
     with contextlib.suppress(PackageNotFoundError):
-        return _package_version("fact-inventory")
+        return _package_version(package_name)
 
     git = shutil.which("git")
     if git is not None:
@@ -95,7 +95,14 @@ class Settings(BaseSettings):
     db_pool_timeout: int = 30
     log_level: str = "INFO"
     debug: bool = False
-    version: str = Field(default_factory=_get_version)
+    version: str = ""
+
+    @model_validator(mode="after")
+    def _resolve_version(self) -> Self:
+        """Resolve version from package metadata using app_name when not set."""
+        if not self.version:
+            self.version = _get_version(self.app_name)
+        return self
 
     @model_validator(mode="after")
     def _apply_debug_log_level(self) -> Self:
