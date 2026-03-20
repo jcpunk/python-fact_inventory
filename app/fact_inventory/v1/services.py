@@ -1,9 +1,12 @@
 import datetime
+import logging
 from typing import Any
 
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
 
 from ..schemas.hostfacts import HostFacts, HostFactsRepository
+
+logger = logging.getLogger(__name__)
 
 
 class HostFactsService(SQLAlchemyAsyncRepositoryService[HostFacts]):
@@ -38,3 +41,18 @@ class HostFactsService(SQLAlchemyAsyncRepositoryService[HostFacts]):
             match_fields=["client_address"],  # tells it how to detect duplicates
             auto_commit=True,
         )
+
+    async def purge_expired_hosts(self, retention_days: int) -> int:
+        """Delete host records not updated within *retention_days*.
+
+        Returns the number of records purged.
+        """
+        cutoff = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(
+            days=retention_days
+        )
+        count = await self.repository.delete_hosts_not_updated_since(cutoff)
+        if count:
+            logger.info("Purged %d host(s) not updated since %s", count, cutoff)
+        else:
+            logger.debug("No expired hosts to purge (cutoff=%s)", cutoff)
+        return count

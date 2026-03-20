@@ -2,8 +2,6 @@
 Creating a Litestar application through composition with some extra features
 """
 
-import asyncio
-import contextlib
 from typing import Any
 from urllib.parse import urlparse
 
@@ -21,7 +19,9 @@ from litestar.di import Provide
 from litestar.openapi.config import OpenAPIConfig
 from litestar.plugins.prometheus import PrometheusConfig, PrometheusController
 
+from .fact_inventory.plugins import DailyCleanupPlugin
 from .fact_inventory.routes import route_handlers as _fact_inventory_handlers
+from .fact_inventory.v1.services import HostFactsService
 from .settings import logger, logging_config, settings
 
 
@@ -30,20 +30,24 @@ def _get_rate_limit_minutes() -> int:
     return settings.rate_limit_minutes
 
 
-async def _on_startup(app: Litestar) -> None:
-    """Start background tasks after the application is ready."""
-    task = None  # automatic cleanup function scheduling goes here
-    if task is not None:
-        app.state.retention_task = task
+def _get_retention_days() -> int:
+    """Provide the configured retention window to fact_inventory's DI system."""
+    return settings.retention_days
 
 
-async def _on_shutdown(app: Litestar) -> None:
-    """Cancel background tasks on shutdown."""
-    task: asyncio.Task[None] | None = getattr(app.state, "retention_task", None)
-    if task is not None and not task.done():
-        task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await task
+def _build_purge_fn(alchemy_config: SQLAlchemyAsyncConfig) -> Any:
+    """Build an async cleanup function that purges expired host records.
+
+    The returned coroutine creates its own short-lived database session so that
+    the background task is fully independent of any request-scoped session.
+    """
+
+    async def _purge_expired_hosts() -> None:
+        async with alchemy_config.get_session() as session:
+            service = HostFactsService(session)
+            await service.purge_expired_hosts(settings.retention_days)
+
+    return _purge_expired_hosts
 
 
 def create_app() -> Litestar:
@@ -98,6 +102,15 @@ def create_app() -> Litestar:
     )
 
     # ------------------------------------------------------------------
+    # Plugins — each owns its lifecycle via InitPluginProtocol
+    # ------------------------------------------------------------------
+    cleanup_plugin = DailyCleanupPlugin(
+        cleanup_fn=_build_purge_fn(alchemy_config),
+        interval_seconds=settings.cleanup_interval_hours * 3600,
+        name="host-retention-cleanup",
+    )
+
+    # ------------------------------------------------------------------
     # Assemble the Litestar app config
     # ------------------------------------------------------------------
     app_config: dict[str, Any] = {
@@ -106,14 +119,13 @@ def create_app() -> Litestar:
             "rate_limit_minutes": Provide(
                 _get_rate_limit_minutes, sync_to_thread=False
             ),
+            "retention_days": Provide(_get_retention_days, sync_to_thread=False),
         },
-        "plugins": [SQLAlchemyPlugin(config=alchemy_config)],
+        "plugins": [SQLAlchemyPlugin(config=alchemy_config), cleanup_plugin],
         "middleware": [
             otel_config.middleware,
             prometheus_config.middleware,
         ],
-        "on_startup": [_on_startup],
-        "on_shutdown": [_on_shutdown],
         "logging_config": logging_config,
         "debug": settings.debug,
     }
@@ -135,9 +147,12 @@ def create_app() -> Litestar:
     # Setup the Litestar app
     # ------------------------------------------------------------------
     logger.info(
-        "%s version %s starting (rate limit %s min)",
+        "%s version %s starting (rate limit %s min, retention %s days,"
+        " cleanup every %s h)",
         settings.app_name,
         settings.version,
         settings.rate_limit_minutes,
+        settings.retention_days,
+        settings.cleanup_interval_hours,
     )
     return Litestar(**app_config)

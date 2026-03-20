@@ -11,17 +11,20 @@ Consumers should import and use that object directly::
     uri = settings.database_uri
 
 Configurable elements (production):
-  - DATABASE_URI: str          (required)
-  - APP_NAME: str              (default "fact_inventory")
-  - RATE_LIMIT_MINUTES: int    (default 27)
-  - CREATE_ALL: bool           (default True)
-  - DB_POOL_SIZE: int          (default 10)
-  - DB_POOL_MAX_OVERFLOW: int  (default 20)
-  - DB_POOL_TIMEOUT: int       (default 30)
-  - LOG_LEVEL: str             (default "INFO"; overridden to "DEBUG" when DEBUG=true)
-  - DEBUG: bool                (default False)
-  - VERSION: str               (default: package metadata for APP_NAME -> git commit ->
-                                "unknown")
+  - DATABASE_URI: str              (required)
+  - APP_NAME: str                  (default "fact_inventory")
+  - RATE_LIMIT_MINUTES: int        (default 27)
+  - RETENTION_DAYS: int            (default 365)
+  - CLEANUP_INTERVAL_HOURS: int    (default 24)
+  - CREATE_ALL: bool               (default True)
+  - DB_POOL_SIZE: int              (default 10)
+  - DB_POOL_MAX_OVERFLOW: int      (default 20)
+  - DB_POOL_TIMEOUT: int           (default 30)
+  - LOG_LEVEL: str                 (default "INFO"; overridden to "DEBUG"
+                                    when DEBUG=true)
+  - DEBUG: bool                    (default False)
+  - VERSION: str                   (default: package metadata for APP_NAME
+                                    -> git commit -> "unknown")
 
 Additional configurable elements (for development with uvicorn):
   - HOST: str = see main.py
@@ -103,6 +106,8 @@ class Settings(BaseSettings):
     app_name: str = "host_inventory"
     fact_inventory_prefix: str = "fact_inventory"
     rate_limit_minutes: int = 90
+    retention_days: int = 365
+    cleanup_interval_hours: int = 24
     create_all: bool = True
     db_pool_size: int = 10
     db_pool_max_overflow: int = 20
