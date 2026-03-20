@@ -7,17 +7,28 @@ The paths are rooted at /fact_inventory so the health check is clearly
 scoped to this application.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 from litestar import Router, get
-from litestar.status_codes import HTTP_200_OK
+from litestar.exceptions import HTTPException
+from litestar.status_codes import HTTP_200_OK, HTTP_503_SERVICE_UNAVAILABLE
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ..settings import logger
 
 
 @dataclass
 class HealthResponse:
-    """Response body returned by the health check endpoint."""
+    """Response body returned by the liveness check endpoint."""
+
+    status: str
+    service: str
+
+
+@dataclass
+class ReadinessResponse:
+    """Response body returned by the readiness check endpoint."""
 
     status: str
     service: str
@@ -27,7 +38,7 @@ class HealthResponse:
     "/health",
     status_code=HTTP_200_OK,
     tags=["health"],
-    summary="Application health check",
+    summary="Application liveness check",
     description=(
         "Returns HTTP 200 with a JSON body when the application process is"
         " running and able to serve requests.  This endpoint has no external"
@@ -41,10 +52,38 @@ async def health_check() -> HealthResponse:
     return HealthResponse(status="ok", service="fact_inventory")
 
 
-# Router rooted at /fact_inventory so the full path is /fact_inventory/health
+@get(
+    "/ready",
+    status_code=HTTP_200_OK,
+    tags=["health"],
+    summary="Database readiness check",
+    description=(
+        "Returns HTTP 200 when the application can reach the database."
+        " Runs a lightweight SELECT 1 query.  Returns HTTP 503 if the"
+        " database is unreachable.  Use this as a readiness probe;"
+        " use /fact_inventory/health as a liveness probe."
+    ),
+    include_in_schema=True,
+)
+async def ready_check(db_session: AsyncSession) -> ReadinessResponse:
+    """Verify database connectivity with a SELECT 1 query."""
+    try:
+        await db_session.execute(text("SELECT 1"))
+    except Exception:
+        logger.exception("Readiness check failed — database unreachable")
+        raise HTTPException(
+            status_code=HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database unavailable",
+        ) from None
+    return ReadinessResponse(status="ok", service="fact_inventory")
+
+
+# Router rooted at /fact_inventory so full paths are:
+#   /fact_inventory/health  (liveness probe)
+#   /fact_inventory/ready   (readiness probe)
 unversioned_router: Router = Router(
     path="/fact_inventory",
-    route_handlers=[health_check],
+    route_handlers=[health_check, ready_check],
 )
 
 routes: list[Router] = [unversioned_router]

@@ -32,6 +32,7 @@ from .settings import (
     DEBUG,
     NAME,
     RATE_LIMIT_MINUTES,
+    VERSION,
     logger,
     logging_config,
 )
@@ -128,7 +129,7 @@ def create_app() -> Litestar:
     if DEBUG:
         app_config["openapi_config"] = OpenAPIConfig(
             title=NAME,
-            version="1.0.0",
+            version=VERSION,
         )
         logger.warning("OpenAPI documentation enabled (debug mode)")
     else:

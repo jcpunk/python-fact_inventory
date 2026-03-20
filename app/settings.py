@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import logging
 import os
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from litestar.logging import LoggingConfig
@@ -34,6 +35,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Constants
 # ----------------------------------------------------------------------
 NAME = "fact_inventory"
+
+try:
+    VERSION: str = version("fact-inventory")
+except PackageNotFoundError:
+    VERSION = "0.0.0+unknown"
+
 RUNTIME = os.getenv("RUNTIME", "testing")
 _ENV_FILE = Path(f".env.{RUNTIME}")
 
