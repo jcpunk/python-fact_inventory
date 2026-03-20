@@ -20,7 +20,7 @@ Configurable elements (production):
   - DB_POOL_TIMEOUT: int       (default 30)
   - LOG_LEVEL: str             (default "INFO"; overridden to "DEBUG" when DEBUG=true)
   - DEBUG: bool                (default False)
-  - VERSION: str               (default: package metadata → git commit → "unknown")
+  - VERSION: str               (default: package metadata for APP_NAME → git commit → "unknown")
 
 Additional configurable elements (for development with uvicorn):
   - HOST: str = see main.py
