@@ -84,3 +84,9 @@ class TestHealthCheck:
         ):
             response = await client.get("/fact_inventory/health")
         assert response.status_code == HTTP_200_OK
+
+    async def test_health_not_rate_limited(self, client: AsyncTestClient) -> None:
+        """Health probe must never be throttled by the rate limiter."""
+        for _ in range(5):
+            response = await client.get("/fact_inventory/health")
+            assert response.status_code == HTTP_200_OK

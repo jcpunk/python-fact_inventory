@@ -1,6 +1,23 @@
+"""REST API controller for fact submissions (v1).
+
+This module defines the HTTP endpoint for submitting system and package
+facts.  It is intentionally thin: validation is handled by the DTO layer,
+rate limiting by Litestar's ``RateLimitMiddleware``, database exceptions by
+advanced-alchemy's ``exception_to_http_response``, and persistence by the
+injected ``HostFactsService``.
+"""
+
 import logging
 from typing import Annotated, Any
 
+from advanced_alchemy.exceptions import RepositoryError
+from advanced_alchemy.extensions.litestar.exception_handler import (
+    exception_to_http_response,
+)
+from advanced_alchemy.extensions.litestar.providers import (
+    Provide,
+    create_service_provider,
+)
 from litestar import Controller, Request, Response, post
 from litestar.exceptions import HTTPException
 from litestar.openapi.datastructures import ResponseSpec
@@ -16,7 +33,6 @@ from litestar.status_codes import (
 )
 from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..constants import MAX_REQUEST_BODY_BYTES
 from ..schemas.hostfacts import HostFacts, HostFactsWriteAPI
@@ -85,7 +101,7 @@ _SUBMIT_ERROR_RESPONSES: dict[int, Any] = {
         examples=[
             Example(
                 summary="Body too large",
-                description=("The submitted payload exceeds the maximum allowed size."),
+                description="The submitted payload exceeds the maximum allowed size.",
                 value={"detail": "Request Entity Too Large"},
             )
         ],
@@ -133,6 +149,11 @@ class HostFactController(Controller):
     Rate limiting is handled externally by Litestar's
     ``RateLimitMiddleware`` (configured in the application factory).
     This controller is responsible only for validation and persistence.
+
+    The ``HostFactsService`` is injected via Litestar's dependency-injection
+    system using advanced-alchemy's ``create_service_provider``.  Database
+    ``RepositoryError`` exceptions are mapped to HTTP responses by
+    advanced-alchemy's ``exception_to_http_response`` handler.
     """
 
     path: str = "/facts"
@@ -143,6 +164,16 @@ class HostFactController(Controller):
 
     # See app/fact_inventory/constants.py for the rationale.
     request_max_body_size: int = MAX_REQUEST_BODY_BYTES
+
+    # Service injected by advanced-alchemy's DI provider.
+    dependencies: dict[str, Any] = {  # noqa: RUF012
+        "host_facts_service": Provide(create_service_provider(HostFactsService)),
+    }
+
+    # Map advanced-alchemy RepositoryError to proper HTTP responses.
+    exception_handlers: dict[int | type[Exception], Any] = {  # noqa: RUF012
+        RepositoryError: exception_to_http_response,
+    }
 
     @post(
         "",
@@ -158,11 +189,11 @@ class HostFactController(Controller):
                 examples=[
                     Example(
                         summary="Fedora System",
-                        description=("Example facts from a Fedora 42 installation"),
+                        description="Example facts from a Fedora 42 installation",
                         value={
                             "system_facts": {
                                 "distribution": "Fedora",
-                                "distribution_file_path": ("/etc/redhat-release"),
+                                "distribution_file_path": "/etc/redhat-release",
                                 "distribution_file_variety": "RedHat",
                                 "distribution_major_version": "42",
                                 "distribution_version": "42",
@@ -193,13 +224,13 @@ class HostFactController(Controller):
             ),
         ],
         request: Request[Any, Any, Any],
-        db_session: AsyncSession,
+        host_facts_service: HostFactsService,
     ) -> Response[Any]:
         """Store submitted system and package facts.
 
         The request body is validated by the DTO layer.  Rate limiting
         is enforced by the ``RateLimitMiddleware`` before this handler
-        is reached.
+        is reached.  The service is injected via DI.
         """
         if request.client is None:
             raise HTTPException(
@@ -210,19 +241,7 @@ class HostFactController(Controller):
         logger.info("Facts submission from %s", client_address)
 
         try:
-            host_service = HostFactsService(db_session)
-        except Exception:
-            logger.exception(
-                "Unexpected error generating session for %s",
-                client_address,
-            )
-            raise HTTPException(
-                detail="Internal server error",
-                status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-            ) from None
-
-        try:
-            await host_service.upsert_host_facts(
+            await host_facts_service.upsert_host_facts(
                 data={
                     "client_address": client_address,
                     "system_facts": data.system_facts,
@@ -249,7 +268,7 @@ class HostFactController(Controller):
             len(data.package_facts),
         )
         return Response(
-            content={"detail": (f"Facts stored successfully for {client_address}")},
+            content={"detail": f"Facts stored successfully for {client_address}"},
             status_code=HTTP_201_CREATED,
             media_type="application/json",
         )

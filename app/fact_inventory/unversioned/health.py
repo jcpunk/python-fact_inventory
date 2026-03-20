@@ -4,23 +4,12 @@ This handler is not tied to any API version and has no external
 dependencies, making it a fast and reliable liveness check.
 """
 
-import logging
-from dataclasses import dataclass
-
 from litestar import get
 from litestar.openapi.datastructures import ResponseSpec
 from litestar.openapi.spec import Example
 from litestar.status_codes import HTTP_200_OK
 
-logger = logging.getLogger(__name__)
-
-
-@dataclass
-class ServiceStatusResponse:
-    """Response body returned by the liveness endpoint."""
-
-    status: str
-    service: str
+from .responses import ServiceStatusResponse
 
 
 @get(

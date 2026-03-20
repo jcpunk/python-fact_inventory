@@ -6,7 +6,6 @@ readiness probe.
 """
 
 import logging
-from dataclasses import dataclass
 
 from litestar import get
 from litestar.exceptions import HTTPException
@@ -16,22 +15,9 @@ from litestar.status_codes import HTTP_200_OK, HTTP_503_SERVICE_UNAVAILABLE
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from .responses import ErrorDetail, ServiceStatusResponse
+
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class ServiceStatusResponse:
-    """Response body returned when the readiness check succeeds."""
-
-    status: str
-    service: str
-
-
-@dataclass
-class ErrorDetail:
-    """Response body returned when the readiness check fails."""
-
-    detail: str
 
 
 @get(

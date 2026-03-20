@@ -131,6 +131,10 @@ With `GIN` indexes on `JSONB` fields, you can efficiently query facts and build 
 - JSON payload size is limited to prevent DoS attacks
 - Required fields in requests are in fact mandatory
 - Unknown fields in requests are rejected
+- **CORS** is not enabled. Clients are server-side scripts (Ansible, curl), not
+  browsers. The absence of CORS headers is the correct restrictive default.
+- **CSRF** protection is not needed. There are no sessions, cookies, or
+  browser-based authentication to protect.
 
 ## Troubleshooting
 

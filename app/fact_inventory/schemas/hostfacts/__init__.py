@@ -1,6 +1,4 @@
-"""
-What objects are in the default namespace
-"""
+"""Public API for the hostfacts schema: model, repository, and DTO."""
 
 from .apis import HostFactsWriteAPI
 from .models import HostFacts
