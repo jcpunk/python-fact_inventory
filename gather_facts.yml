@@ -18,7 +18,7 @@
 
     - name: Make POST request with ansible_facts
       ansible.builtin.uri:
-        url: http://127.0.0.1:8000/v1/facts
+        url: http://127.0.0.1:8000/fact_inventory/v1/facts
         method: POST
         body_format: json
         body:

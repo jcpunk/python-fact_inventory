@@ -333,7 +333,7 @@ class TestFactControllerSubmit:
         assert set(response.json().keys()) == {"detail"}
 
     # ------------------------------------------------------------------
-    # 409 path — storage layer failure
+    # 409 path -- storage layer failure
     # ------------------------------------------------------------------
 
     async def test_submit_storage_failure_returns_409(
@@ -404,7 +404,7 @@ class TestFactControllerSubmit:
         assert "simulated write failure" not in detail
 
     # ------------------------------------------------------------------
-    # 500 path — unexpected exception
+    # 500 path -- unexpected exception
     # ------------------------------------------------------------------
 
     async def test_submit_unexpected_error_returns_500(
@@ -424,7 +424,7 @@ class TestFactControllerSubmit:
         assert response.status_code == HTTP_500_INTERNAL_SERVER_ERROR
 
     # ------------------------------------------------------------------
-    # Valid payload content — accepted value types inside facts dicts
+    # Valid payload content -- accepted value types inside facts dicts
     # ------------------------------------------------------------------
 
     async def test_submit_null_values_in_system_facts(

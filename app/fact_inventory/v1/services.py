@@ -24,7 +24,7 @@ class HostFactsService(SQLAlchemyAsyncRepositoryService[HostFacts]):
     async def upsert_host_facts(self, data: dict[str, Any]) -> None:
         """Create or update a host fact record.
 
-        Matching is based on ``client_address`` — if a record already
+        Matching is based on ``client_address`` -- if a record already
         exists for the same IP the row is updated in place and its
         ``updated_at`` timestamp is refreshed.
         """

@@ -55,7 +55,7 @@ _SUBMIT_SUCCESS_RESPONSES: dict[int, Any] = {
 _SUBMIT_ERROR_RESPONSES: dict[int, Any] = {
     HTTP_400_BAD_REQUEST: ResponseSpec(
         data_container=DetailResponse,
-        description="Bad Request — the client address could not be determined",
+        description="Bad Request -- the client address could not be determined",
         examples=[
             Example(
                 summary="Missing client address",
@@ -68,7 +68,7 @@ _SUBMIT_ERROR_RESPONSES: dict[int, Any] = {
     ),
     HTTP_409_CONFLICT: ResponseSpec(
         data_container=DetailResponse,
-        description="Conflict — the record could not be stored",
+        description="Conflict -- the record could not be stored",
         examples=[
             Example(
                 summary="Record could not be stored",
@@ -80,7 +80,7 @@ _SUBMIT_ERROR_RESPONSES: dict[int, Any] = {
     HTTP_413_REQUEST_ENTITY_TOO_LARGE: ResponseSpec(
         data_container=DetailResponse,
         description=(
-            "Payload Too Large — the request body exceeds the configured size limit"
+            "Payload Too Large -- the request body exceeds the configured size limit"
         ),
         examples=[
             Example(
@@ -93,7 +93,7 @@ _SUBMIT_ERROR_RESPONSES: dict[int, Any] = {
     HTTP_429_TOO_MANY_REQUESTS: ResponseSpec(
         data_container=DetailResponse,
         description=(
-            "Too Many Requests — the client has exceeded the"
+            "Too Many Requests -- the client has exceeded the"
             " rate limit.  Check the RateLimit-* response headers."
         ),
         examples=[
@@ -113,7 +113,7 @@ _SUBMIT_ERROR_RESPONSES: dict[int, Any] = {
     ),
     HTTP_500_INTERNAL_SERVER_ERROR: ResponseSpec(
         data_container=DetailResponse,
-        description="Internal Server Error — an unexpected error occurred",
+        description="Internal Server Error -- an unexpected error occurred",
         examples=[
             Example(
                 summary="Unexpected server error",
@@ -137,7 +137,7 @@ class HostFactController(Controller):
 
     path: str = "/facts"
 
-    # OpenAPI grouping — Litestar reads this as an instance var,
+    # OpenAPI grouping -- Litestar reads this as an instance var,
     # so ClassVar conflicts with the base class.
     tags: list[str] = ["v1"]  # noqa: RUF012
 

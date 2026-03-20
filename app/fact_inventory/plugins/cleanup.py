@@ -26,12 +26,12 @@ Design rationale
 * The first cleanup run is deferred until *after* the first sleep so the
   plugin never blocks application startup.
 * All exceptions inside the cleanup function are logged but do **not**
-  crash the loop — the plugin retries on the next interval.
+  crash the loop -- the plugin retries on the next interval.
 
 Why not ``BackgroundTask``?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ``litestar.background_tasks.BackgroundTask`` is designed for **one-shot
-tasks triggered after an HTTP response** — it is tied to the
+tasks triggered after an HTTP response** -- it is tied to the
 request/response cycle.  A periodic retention job must run independently
 of requests, so we use an ``asyncio.Task`` managed through the
 application lifespan instead.
@@ -56,7 +56,7 @@ _MIN_INTERVAL_SECONDS = 60
 class DailyCleanupPlugin(InitPluginProtocol):
     """Background plugin that runs a cleanup coroutine once per interval.
 
-    Runs in the application's event loop — safe for async DB calls.
+    Runs in the application's event loop -- safe for async DB calls.
     The first run is deferred until after the first sleep, avoiding
     startup latency.
 
@@ -141,6 +141,6 @@ class DailyCleanupPlugin(InitPluginProtocol):
                 raise  # propagate shutdown signal
             except Exception:
                 logger.exception(
-                    "%s: run failed — will retry next interval",
+                    "%s: run failed - will retry next interval",
                     self._name,
                 )

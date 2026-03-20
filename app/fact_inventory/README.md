@@ -89,7 +89,7 @@ app = Litestar(
 ```
 
 The plugin is self-contained within the fact_inventory package and uses
-`lifespan` context managers — no `on_startup`/`on_shutdown` hooks are needed.
+`lifespan` context managers -- no `on_startup`/`on_shutdown` hooks are needed.
 
 ## Routes
 

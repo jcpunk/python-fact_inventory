@@ -1,5 +1,5 @@
 """
-Application factory — creates and configures the Litestar ASGI application.
+Application factory -- creates and configures the Litestar ASGI application.
 
 The factory wires together:
 * Database (SQLAlchemy async via ``advanced_alchemy``)
@@ -96,7 +96,7 @@ def create_app() -> Litestar:
     prometheus_config = PrometheusConfig(app_name=settings.app_name)
 
     # ------------------------------------------------------------------
-    # Rate limiting — uses Litestar's built-in RateLimitMiddleware.
+    # Rate limiting -- uses Litestar's built-in RateLimitMiddleware.
     #
     # Applied to the fact_inventory router so that health/ready probes
     # and /metrics are never throttled.  The middleware uses an in-memory
@@ -119,7 +119,7 @@ def create_app() -> Litestar:
     )
 
     # ------------------------------------------------------------------
-    # Plugins — each owns its lifecycle via InitPluginProtocol
+    # Plugins -- each owns its lifecycle via InitPluginProtocol
     # ------------------------------------------------------------------
     cleanup_plugin = DailyCleanupPlugin(
         cleanup_fn=_build_purge_fn(alchemy_config),

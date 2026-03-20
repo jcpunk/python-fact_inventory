@@ -25,8 +25,8 @@ Configurable elements (production):
   - LOG_LEVEL: str                 (default "INFO"; overridden to "DEBUG"
                                     when DEBUG=true)
   - DEBUG: bool                    (default False)
-  - VERSION: str                   (default: package metadata →
-                                    git commit → "unknown")
+  - VERSION: str                   (default: package metadata,
+                                    then git commit, then "unknown")
 
 Additional configurable elements (for development with uvicorn):
   - HOST: str = see main.py

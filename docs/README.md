@@ -14,7 +14,7 @@ The service includes rate limiting to prevent abuse and can use PostgreSQL with 
 - **Flexible Storage**: Stores arbitrary JSON data for system and package facts
 - **OpenAPI Documentation**: Auto-generated API docs in debug mode
 - **IP Validation**: IPv4 and IPv6 address validation
-- **Payload Size Limits**: "Configurable" max body size and JSON field size validation
+- **Payload Size Limits**: Configurable max body size and JSON field size validation
 
 ## Server Requirements
 
@@ -22,9 +22,9 @@ The service includes rate limiting to prevent abuse and can use PostgreSQL with 
 - PostgreSQL 16+ (recommended for `JSONB` and `GIN` index performance)
 - Required Python packages:
   - `advanced-alchemy`
-  - `dotenv`
   - `litestar`
   - `pydantic`
+  - `pydantic-settings`
   - `sqlalchemy`
   - `asyncpg` (for PostgreSQL)
 
@@ -44,7 +44,7 @@ uv sync
 
 ## Configuration
 
-Configuration is managed through environment varibles. These can be loaded programmatically from `.env` files. Set `RUNTIME` to select your `dotenv` config:
+Configuration is managed through environment variables. These can be loaded from `.env` files via `pydantic-settings`. Set `RUNTIME` to select your environment config:
 
 ```bash
 export RUNTIME=production  # loads .env.production
@@ -56,7 +56,7 @@ export RUNTIME=testing     # loads .env.testing (default)
 - **DATABASE_URI**: Database connection string (required) - PostgreSQL recommended
 - **APP_NAME**: Application name used in metrics and OpenAPI docs (default: `host_inventory`)
 - **FACT_INVENTORY_PREFIX**: URL prefix for the fact_inventory sub-app (default: `fact_inventory`)
-- **RATE_LIMIT_UNIT**: Time unit for rate limiting — `second`, `minute`, `hour`, or `day` (default: `hour`)
+- **RATE_LIMIT_UNIT**: Time unit for rate limiting -- `second`, `minute`, `hour`, or `day` (default: `hour`)
 - **RATE_LIMIT_MAX_REQUESTS**: Maximum requests allowed per rate limit unit (default: `1`)
 - **RETENTION_DAYS**: Days to retain host records before automatic purge (default: `365`)
 - **CLEANUP_INTERVAL_HOURS**: Hours between background cleanup runs (default: `24`)
@@ -64,7 +64,6 @@ export RUNTIME=testing     # loads .env.testing (default)
 - **DB_POOL_SIZE**: Database connection pool size (default: `10`, PostgreSQL only)
 - **DB_POOL_MAX_OVERFLOW**: Max connections above pool size (default: `20`, PostgreSQL only)
 - **DB_POOL_TIMEOUT**: Seconds to wait for a connection from the pool (default: `30`, PostgreSQL only)
-- **ALLOWED_ORIGINS**: Comma-separated list of allowed CORS origins (default: none)
 - **DEBUG**: Enable debug mode and OpenAPI docs (default: `false`)
 - **LOG_LEVEL**: Logging level - DEBUG, INFO, WARNING, ERROR (default: `INFO`)
 
@@ -83,7 +82,6 @@ CREATE_ALL=true
 DB_POOL_SIZE=10
 DB_POOL_MAX_OVERFLOW=20
 DB_POOL_TIMEOUT=30
-ALLOWED_ORIGINS=
 DEBUG=false
 LOG_LEVEL=INFO
 ```
@@ -93,7 +91,7 @@ LOG_LEVEL=INFO
 For production, use a production ASGI server like Uvicorn:
 
 ```bash
-uvicorn app_factory:create_app --factory --host 0.0.0.0 --port 8000
+uvicorn app.app_factory:create_app --factory --host 0.0.0.0 --port 8000
 ```
 
 ### Data Retention
