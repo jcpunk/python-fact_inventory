@@ -10,13 +10,6 @@ from ...constants import MAX_JSON_FIELD_BYTES
 from .models import HostFacts
 
 
-class _FieldSizeError(ValueError):
-    """Raised when a JSON field exceeds the maximum permitted byte size."""
-
-    def __init__(self, max_bytes: int) -> None:
-        super().__init__(f"JSON field exceeds maximum size of {max_bytes} bytes")
-
-
 class HostFactsWriteAPI(SQLAlchemyDTO[HostFacts]):
     """DTO that exposes only the writable fields of HostFacts to API consumers."""
 
@@ -38,5 +31,5 @@ class HostFactsWriteAPI(SQLAlchemyDTO[HostFacts]):
         See https://github.com/orgs/litestar-org/discussions/4351 for background.
         """
         if len(json.dumps(v).encode("utf-8")) > MAX_JSON_FIELD_BYTES:
-            raise _FieldSizeError(MAX_JSON_FIELD_BYTES)
+            raise ValueError(f"JSON field exceeds maximum size of {MAX_JSON_FIELD_BYTES} bytes")
         return v

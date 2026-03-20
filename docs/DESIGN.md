@@ -4,14 +4,40 @@ The application follows a layered architecture:
 
 ## API
 
-### /v1
+### Routing architecture
 
-- **Controller Layer** (`controller.py`): HTTP endpoint handlers with request validation
-- **Service Layer** (`services.py`): Business logic without database specific behavior
+All `fact_inventory` route handlers are defined at relative paths with no
+prefix baked in.  The host application mounts them under a chosen prefix by
+wrapping the exported `route_handlers` list in a standard Litestar `Router`:
 
-#### /v1/facts
+```python
+from litestar import Router
+from app.fact_inventory.routes import route_handlers
 
-**Endpoint**: `POST /v1/facts`
+Router(path="/fact_inventory", route_handlers=route_handlers)
+```
+
+The `APP_NAME` setting (default `fact_inventory`) controls the prefix used by
+the bundled application factory, producing the paths shown below.
+
+### Unversioned routes
+
+These operational endpoints are not tied to any API version and have no
+database-layer dependencies beyond the readiness probe:
+
+| Method | Path                    | Description                                          |
+|--------|-------------------------|------------------------------------------------------|
+| `GET`  | `/{prefix}/health`      | Liveness probe — HTTP 200 while the process is alive |
+| `GET`  | `/{prefix}/ready`       | Readiness probe — HTTP 200 when the database is reachable (`SELECT 1`), HTTP 503 otherwise |
+
+### /{prefix}/v1
+
+- **Controller Layer** (`v1/controller.py`): HTTP endpoint handlers with request validation
+- **Service Layer** (`v1/services.py`): Business logic without database specific behavior
+
+#### /{prefix}/v1/facts
+
+**Endpoint**: `POST /{prefix}/v1/facts`
 
 **Content-Type**: `application/json`
 
@@ -44,11 +70,11 @@ Headers include `Retry-After` in seconds.
 ##### Example with curl
 
 ```bash
-curl -X POST http://localhost:8000/v1/facts \
+curl -X POST http://localhost:8000/fact_inventory/v1/facts \
   -H "Content-Type: application/json" \
   -d '{
     "system_facts": {},
-    "package_facts": {},
+    "package_facts": {}
   }'
 ```
 

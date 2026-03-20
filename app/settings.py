@@ -53,24 +53,36 @@ def _get_version(package_name: str) -> str:
     2. Current git commit short-hash (``git rev-parse --short HEAD``).
     3. The literal string ``"unknown"``.
     """
+    _log = logging.getLogger(__name__)
+
     with contextlib.suppress(PackageNotFoundError):
         return _package_version(package_name)
 
-    git = shutil.which("git")
-    if git is not None:
-        with contextlib.suppress(subprocess.CalledProcessError):
-            # All arguments are controlled: `git` is a fully-resolved path from
-            # shutil.which() and the remaining args are literals, so there is no
-            # untrusted input here.  S603 is suppressed accordingly.
-            result = subprocess.run(  # noqa: S603
-                [git, "rev-parse", "--short", "HEAD"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            return f"git-{result.stdout.strip()}"
+    _log.debug(
+        "Package metadata not found for %r; falling back to git commit hash",
+        package_name,
+    )
 
-    return "unknown"
+    git = shutil.which("git")
+    if git is None:
+        _log.debug("git not found on PATH; version will be reported as 'unknown'")
+        return "unknown"
+
+    try:
+        # All arguments are controlled: `git` is a fully-resolved path from
+        # shutil.which() and the remaining args are literals, so there is no
+        # untrusted input here.  S603 is suppressed accordingly.
+        result = subprocess.run(  # noqa: S603
+            [git, "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError:
+        _log.debug("git rev-parse failed; version will be reported as 'unknown'")
+        return "unknown"
+
+    return f"git-{result.stdout.strip()}"
 
 
 # ----------------------------------------------------------------------
