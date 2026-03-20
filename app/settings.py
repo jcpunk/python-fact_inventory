@@ -1,8 +1,8 @@
 """
-Load application configs from dotenv.
+Load application configuration from environment variables and .env files.
 
-setenv RUNTIME to select .env.${RUNTIME}
-or you will get the `testing` environment
+Set the RUNTIME environment variable to select `.env.${RUNTIME}`;
+defaults to the ``testing`` environment when unset.
 
 Configurable elements (production):
   - DATABASE_URI: str
@@ -20,60 +20,78 @@ Additional Configurable elements (for development with uvicorn):
   - PORT: int = see main.py
 """
 
+from __future__ import annotations
+
 import logging
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
 from litestar.logging import LoggingConfig
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # ----------------------------------------------------------------------
 # Constants
 # ----------------------------------------------------------------------
-__TRUE_SET = {"true", "yes", "y", "on", "1"}
 NAME = "fact_inventory"
-
-# ----------------------------------------------------------------------
-# Runtime environment handling
-# ----------------------------------------------------------------------
 RUNTIME = os.getenv("RUNTIME", "testing")
-ENV_FILE = Path(f".env.{RUNTIME}")
+_ENV_FILE = Path(f".env.{RUNTIME}")
 
-if ENV_FILE.is_file():
-    load_dotenv(ENV_FILE, override=True)
-    print(f"Loaded environment configuration from: {ENV_FILE}")
-else:
-    print(f"No .env file for {RUNTIME!s} ({ENV_FILE}) - trying defaults")
-
-DEBUG = os.getenv("DEBUG", "false").strip().casefold() in __TRUE_SET
-
-if DEBUG:  # debug mode always has debug logs
-    os.environ["LOG_LEVEL"] = "DEBUG"
 
 # ----------------------------------------------------------------------
-# Core configuration values (can be overridden in the .env file)
+# Settings model — reads from environment and .env file
 # ----------------------------------------------------------------------
+class Settings(BaseSettings):
+    """Application settings loaded from environment variables and .env file."""
 
-DATABASE_URI = os.getenv("DATABASE_URI")  # required at runtime
-if not DATABASE_URI:
-    raise RuntimeError("DATABASE_URI environment variable is required")  # noqa: TRY003
+    model_config = SettingsConfigDict(
+        env_file=str(_ENV_FILE),
+        env_file_encoding="utf-8",
+        extra="ignore",
+        populate_by_name=True,
+    )
 
-RATE_LIMIT_MINUTES = int(os.getenv("RATE_LIMIT_MINUTES", "27"))
+    database_uri: str = ...  # type: ignore[assignment]  # required — no default
+    rate_limit_minutes: int = 27
+    create_all: bool = True
+    db_pool_size: int = 10
+    db_pool_max_overflow: int = 20
+    db_pool_timeout: int = 30
+    allowed_origins: list[str] = []
+    log_level: str = "INFO"
+    debug: bool = False
 
-CREATE_ALL = os.getenv("CREATE_ALL", "true").strip().casefold() in __TRUE_SET
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def _split_origins(cls, v: object) -> list[str]:
+        """Accept a comma-separated string or a list of strings."""
+        if isinstance(v, str):
+            return [o.strip() for o in v.split(",") if o.strip()]
+        if isinstance(v, list):
+            return [str(item) for item in v]
+        msg = f"allowed_origins must be a string or list, got {type(v).__name__}"
+        raise TypeError(msg)
 
-DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "10"))
-DB_POOL_MAX_OVERFLOW = int(os.getenv("DB_POOL_MAX_OVERFLOW", "20"))
-DB_POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
 
-ALLOWED_ORIGINS: list[str] = [
-    o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()
-]
-
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+_settings = Settings()
 
 # ----------------------------------------------------------------------
-# Logging configuration setup
+# Module-level exports used throughout the application
+# ----------------------------------------------------------------------
+DATABASE_URI: str = _settings.database_uri
+RATE_LIMIT_MINUTES: int = _settings.rate_limit_minutes
+CREATE_ALL: bool = _settings.create_all
+DB_POOL_SIZE: int = _settings.db_pool_size
+DB_POOL_MAX_OVERFLOW: int = _settings.db_pool_max_overflow
+DB_POOL_TIMEOUT: int = _settings.db_pool_timeout
+ALLOWED_ORIGINS: list[str] = _settings.allowed_origins
+DEBUG: bool = _settings.debug
+
+# DEBUG mode always uses DEBUG-level logging.
+LOG_LEVEL: str = "DEBUG" if DEBUG else _settings.log_level
+
+# ----------------------------------------------------------------------
+# Logging configuration
 # ----------------------------------------------------------------------
 logging_config = LoggingConfig(
     root={"level": logging.getLevelName(LOG_LEVEL), "handlers": ["console"]},

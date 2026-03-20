@@ -18,9 +18,10 @@ from advanced_alchemy.extensions.litestar.plugins.init.config.engine import (
 from litestar import Litestar
 from litestar.config.cors import CORSConfig
 from litestar.contrib.opentelemetry import OpenTelemetryConfig
+from litestar.openapi.config import OpenAPIConfig
 from litestar.plugins.prometheus import PrometheusConfig, PrometheusController
 
-from .fact_inventory.versioned_routes import routes
+from .fact_inventory.routes import routes
 from .settings import (
     ALLOWED_ORIGINS,
     CREATE_ALL,
@@ -125,7 +126,10 @@ def create_app() -> Litestar:
     # OpenAPI docs are enabled in debug mode
     # ------------------------------------------------------------------
     if DEBUG:
-        app_config["openapi_config"] = True
+        app_config["openapi_config"] = OpenAPIConfig(
+            title=NAME,
+            version="1.0.0",
+        )
         logger.warning("OpenAPI documentation enabled (debug mode)")
     else:
         app_config["openapi_config"] = None

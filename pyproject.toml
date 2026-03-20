@@ -7,8 +7,8 @@ readme = "docs/README.md"
 requires-python = ">=3.12"
 dependencies = [
   "advanced-alchemy>=1.8.2",
-  "dotenv>=0.9.9",
   "litestar[sqlalchemy,standard,prometheus,opentelemetry]>=2.21.1",
+  "pydantic-settings>=2.0.0",
   "pydantic>=2.12.5",
   "sqlalchemy[aiosqlite,postgresql-asyncpg]>=2.0.48",
 ]
