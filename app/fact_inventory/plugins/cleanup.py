@@ -1,8 +1,8 @@
 """Background cleanup plugin for periodic host retention enforcement.
 
 The ``DailyCleanupPlugin`` implements Litestar's ``InitPluginProtocol`` so it
-can wire its own ``on_startup`` / ``on_shutdown`` hooks through ``on_app_init``
-rather than requiring the host application to manage background tasks directly.
+can wire its own lifecycle hooks through ``on_app_init`` rather than requiring
+the host application to manage background tasks directly.
 
 Usage::
 
@@ -21,20 +21,27 @@ Usage::
 
 Design rationale
 ~~~~~~~~~~~~~~~~
-* Wired via ``on_app_init`` so the plugin owns its full lifecycle and
-  remains portable across Litestar applications.
+* Uses Litestar's ``lifespan`` context-manager hook so startup and
+  shutdown are managed in a single, self-contained block.
 * The first cleanup run is deferred until *after* the first sleep so the
   plugin never blocks application startup.
-* The plugin cancels its task cleanly on shutdown, suppressing
-  ``CancelledError`` so the ASGI server can shut down gracefully.
 * All exceptions inside the cleanup function are logged but do **not**
   crash the loop — the plugin retries on the next interval.
+
+Why not ``BackgroundTask``?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``litestar.background_tasks.BackgroundTask`` is designed for **one-shot
+tasks triggered after an HTTP response** — it is tied to the
+request/response cycle.  A periodic retention job must run independently
+of requests, so we use an ``asyncio.Task`` managed through the
+application lifespan instead.
 """
 
 import asyncio
 import contextlib
 import logging
-from collections.abc import Callable, Coroutine
+from collections.abc import AsyncGenerator, Callable, Coroutine
+from contextlib import asynccontextmanager
 from typing import Any
 
 from litestar import Litestar
@@ -63,6 +70,11 @@ class DailyCleanupPlugin(InitPluginProtocol):
     name:
         Human-readable label used in log messages and as the
         ``asyncio.Task`` name.
+
+    Raises
+    ------
+    ValueError
+        If *interval_seconds* is less than 60.
     """
 
     def __init__(
@@ -81,40 +93,40 @@ class DailyCleanupPlugin(InitPluginProtocol):
         self._cleanup_fn = cleanup_fn
         self._interval = interval_seconds
         self._name = name
-        self._task: asyncio.Task[None] | None = None
 
     # ------------------------------------------------------------------
     # InitPluginProtocol
     # ------------------------------------------------------------------
 
     def on_app_init(self, app_config: AppConfig) -> AppConfig:
-        """Register startup / shutdown hooks with the Litestar application."""
-        app_config.on_startup.append(self._start)
-        app_config.on_shutdown.append(self._stop)
+        """Register a lifespan context manager with the application."""
+        app_config.lifespan.append(self._lifespan)
         return app_config
 
     # ------------------------------------------------------------------
-    # Internal lifecycle helpers
+    # Lifespan management
     # ------------------------------------------------------------------
 
-    async def _start(self, _app: Litestar | None = None) -> None:
-        """Create the background task.  Called by Litestar on startup."""
+    @asynccontextmanager
+    async def _lifespan(self, _app: Litestar) -> AsyncGenerator[None, None]:
+        """Manage the background task for the application's lifetime."""
         logger.info(
-            "%s: scheduling cleanup every %ds", self._name, self._interval
+            "%s: scheduling cleanup every %ds",
+            self._name,
+            self._interval,
         )
-        self._task = asyncio.create_task(
-            self._loop(), name=self._name
-        )
+        task = asyncio.create_task(self._loop(), name=self._name)
+        try:
+            yield
+        finally:
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+            logger.info("%s: stopped", self._name)
 
-    async def _stop(self, _app: Litestar | None = None) -> None:
-        """Cancel the background task.  Called by Litestar on shutdown."""
-        if self._task is None or self._task.done():
-            logger.debug("%s: no active task to cancel", self._name)
-            return
-        self._task.cancel()
-        with contextlib.suppress(asyncio.CancelledError, Exception):
-            await self._task
-        logger.info("%s: stopped", self._name)
+    # ------------------------------------------------------------------
+    # Periodic loop
+    # ------------------------------------------------------------------
 
     async def _loop(self) -> None:
         """Infinite loop: sleep then run the cleanup callable."""

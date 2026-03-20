@@ -3,12 +3,16 @@ Tests for the DailyCleanupPlugin.
 """
 
 import asyncio
+import contextlib
+from unittest.mock import MagicMock
 
+import pytest
 from app.fact_inventory.plugins.cleanup import DailyCleanupPlugin
 from litestar.config.app import AppConfig
 
 _ONE_DAY_SECONDS = 86_400
 _ONE_HOUR_SECONDS = 3600
+_MIN_INTERVAL_SECONDS = 60
 _MIN_EXPECTED_CALLS = 2
 
 
@@ -37,7 +41,8 @@ class TestDailyCleanupPluginInit:
         async def _noop() -> None: ...
 
         plugin = DailyCleanupPlugin(
-            cleanup_fn=_noop, interval_seconds=_ONE_HOUR_SECONDS
+            cleanup_fn=_noop,
+            interval_seconds=_ONE_HOUR_SECONDS,
         )
         assert plugin._interval == _ONE_HOUR_SECONDS
 
@@ -57,43 +62,44 @@ class TestDailyCleanupPluginInit:
         plugin = DailyCleanupPlugin(cleanup_fn=_noop, name="my-job")
         assert plugin._name == "my-job"
 
-    def test_task_initially_none(self) -> None:
-        """The background task must be None before startup."""
+    def test_rejects_interval_below_minimum(self) -> None:
+        """interval_seconds below the minimum must raise ValueError."""
 
         async def _noop() -> None: ...
 
-        plugin = DailyCleanupPlugin(cleanup_fn=_noop)
-        assert plugin._task is None
+        with pytest.raises(ValueError, match="interval_seconds must be"):
+            DailyCleanupPlugin(
+                cleanup_fn=_noop,
+                interval_seconds=_MIN_INTERVAL_SECONDS - 1,
+            )
+
+    def test_accepts_minimum_interval(self) -> None:
+        """Exactly the minimum interval must be accepted."""
+
+        async def _noop() -> None: ...
+
+        plugin = DailyCleanupPlugin(
+            cleanup_fn=_noop,
+            interval_seconds=_MIN_INTERVAL_SECONDS,
+        )
+        assert plugin._interval == _MIN_INTERVAL_SECONDS
 
 
 class TestDailyCleanupPluginOnAppInit:
     """Tests for the on_app_init hook."""
 
-    def test_registers_startup_hook(self) -> None:
-        """on_app_init must append to on_startup."""
+    def test_registers_lifespan_hook(self) -> None:
+        """on_app_init must append to the lifespan list."""
 
         async def _noop() -> None: ...
 
         plugin = DailyCleanupPlugin(cleanup_fn=_noop)
         config = AppConfig()
-        original_len = len(config.on_startup)
+        original_len = len(config.lifespan)
 
         plugin.on_app_init(config)
 
-        assert len(config.on_startup) == original_len + 1
-
-    def test_registers_shutdown_hook(self) -> None:
-        """on_app_init must append to on_shutdown."""
-
-        async def _noop() -> None: ...
-
-        plugin = DailyCleanupPlugin(cleanup_fn=_noop)
-        config = AppConfig()
-        original_len = len(config.on_shutdown)
-
-        plugin.on_app_init(config)
-
-        assert len(config.on_shutdown) == original_len + 1
+        assert len(config.lifespan) == original_len + 1
 
     def test_returns_app_config(self) -> None:
         """on_app_init must return the (possibly mutated) AppConfig."""
@@ -109,73 +115,53 @@ class TestDailyCleanupPluginOnAppInit:
 
 
 class TestDailyCleanupPluginLifecycle:
-    """Tests for the start / stop / loop lifecycle."""
+    """Tests for the lifespan-managed lifecycle."""
 
-    async def test_start_creates_task(self) -> None:
-        """_start must create an asyncio.Task."""
-        call_count = 0
-
-        async def _counting() -> None:
-            nonlocal call_count
-            call_count += 1
-
-        plugin = DailyCleanupPlugin(
-            cleanup_fn=_counting, interval_seconds=1, name="test-start"
-        )
-        await plugin._start()
-
-        assert plugin._task is not None
-        assert not plugin._task.done()
-
-        # Clean up
-        await plugin._stop()
-
-    async def test_stop_cancels_task(self) -> None:
-        """_stop must cancel the running task cleanly."""
-
-        async def _noop() -> None: ...
-
-        plugin = DailyCleanupPlugin(
-            cleanup_fn=_noop, interval_seconds=1, name="test-stop"
-        )
-        await plugin._start()
-        assert plugin._task is not None
-
-        await plugin._stop()
-
-        assert plugin._task.done()
-
-    async def test_stop_noop_when_no_task(self) -> None:
-        """_stop must not raise when called before _start."""
-
-        async def _noop() -> None: ...
-
-        plugin = DailyCleanupPlugin(cleanup_fn=_noop)
-        # Must not raise
-        await plugin._stop()
-
-    async def test_cleanup_fn_is_called(self) -> None:
-        """The cleanup function must be called after the sleep interval."""
+    async def test_lifespan_creates_and_cancels_task(self) -> None:
+        """The lifespan context manager must manage a task."""
         called = asyncio.Event()
 
         async def _signal() -> None:
             called.set()
 
         plugin = DailyCleanupPlugin(
-            cleanup_fn=_signal, interval_seconds=0, name="test-call"
+            cleanup_fn=_signal,
+            interval_seconds=_MIN_INTERVAL_SECONDS,
+            name="test-lifecycle",
         )
-        await plugin._start()
+        mock_app = MagicMock()
 
-        # Wait briefly for the async loop to fire
-        try:
-            await asyncio.wait_for(called.wait(), timeout=2.0)
-        finally:
-            await plugin._stop()
+        async with plugin._lifespan(mock_app):
+            tasks = [t for t in asyncio.all_tasks() if t.get_name() == "test-lifecycle"]
+            assert len(tasks) == 1
+
+        # After exiting the context manager, task should be done
+        assert tasks[0].done()
+
+    async def test_cleanup_fn_is_called(self) -> None:
+        """The cleanup function must be called after the interval."""
+        called = asyncio.Event()
+
+        async def _signal() -> None:
+            called.set()
+
+        plugin = DailyCleanupPlugin(
+            cleanup_fn=_signal,
+            interval_seconds=_MIN_INTERVAL_SECONDS,
+            name="test-call",
+        )
+        # Override interval for fast test execution
+        plugin._interval = 0
+        mock_app = MagicMock()
+
+        async with plugin._lifespan(mock_app):
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(called.wait(), timeout=2.0)
 
         assert called.is_set()
 
     async def test_loop_survives_cleanup_exception(self) -> None:
-        """An exception in the cleanup function must not kill the loop."""
+        """An exception in the cleanup fn must not kill the loop."""
         call_count = 0
 
         async def _failing() -> None:
@@ -186,13 +172,16 @@ class TestDailyCleanupPluginLifecycle:
                 raise RuntimeError(msg)
 
         plugin = DailyCleanupPlugin(
-            cleanup_fn=_failing, interval_seconds=0, name="test-survive"
+            cleanup_fn=_failing,
+            interval_seconds=_MIN_INTERVAL_SECONDS,
+            name="test-survive",
         )
-        await plugin._start()
+        # Override interval for fast test execution
+        plugin._interval = 0
+        mock_app = MagicMock()
 
-        # Give the loop time to run twice
-        await asyncio.sleep(0.1)
-        await plugin._stop()
+        async with plugin._lifespan(mock_app):
+            await asyncio.sleep(0.1)
 
         assert call_count >= _MIN_EXPECTED_CALLS, (
             f"Expected >={_MIN_EXPECTED_CALLS} calls, got {call_count}"

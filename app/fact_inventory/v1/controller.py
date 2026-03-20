@@ -5,7 +5,7 @@ from litestar import Controller, Request, Response, post
 from litestar.exceptions import HTTPException
 from litestar.openapi.datastructures import ResponseSpec
 from litestar.openapi.spec import Example
-from litestar.params import Body, Dependency
+from litestar.params import Body
 from litestar.status_codes import (
     HTTP_201_CREATED,
     HTTP_400_BAD_REQUEST,
@@ -85,20 +85,29 @@ _SUBMIT_ERROR_RESPONSES: dict[int, Any] = {
         examples=[
             Example(
                 summary="Body too large",
-                description="The submitted payload exceeds the maximum allowed size.",
+                description=("The submitted payload exceeds the maximum allowed size."),
                 value={"detail": "Request Entity Too Large"},
             )
         ],
     ),
     HTTP_429_TOO_MANY_REQUESTS: ResponseSpec(
         data_container=DetailResponse,
-        description="Too Many Requests — this client IP submitted facts too recently",
+        description=(
+            "Too Many Requests — the client has exceeded the"
+            " rate limit.  Check the RateLimit-* response headers."
+        ),
         examples=[
             Example(
                 summary="Rate limit exceeded",
-                description="The client must wait before submitting again."
-                " Check the Retry-After response header for the exact delay.",
-                value={"detail": "Rate limit exceeded. Wait 28 minutes"},
+                description=(
+                    "The client must wait before submitting again."
+                    " Handled automatically by"
+                    " litestar.middleware.rate_limit."
+                ),
+                value={
+                    "status_code": 429,
+                    "detail": "Too Many Requests",
+                },
             )
         ],
     ),
@@ -119,19 +128,20 @@ _SUBMIT_ERROR_RESPONSES: dict[int, Any] = {
 
 
 class HostFactController(Controller):
-    """
-    REST API controller for handling fact submissions.
+    """REST API controller for handling fact submissions.
+
+    Rate limiting is handled externally by Litestar's
+    ``RateLimitMiddleware`` (configured in the application factory).
+    This controller is responsible only for validation and persistence.
     """
 
-    # URL to expose
     path: str = "/facts"
 
-    # OpenAPI Grouping of the API endpoints
-    # Litestar reads this as an instance var
-    # thus ClassVar conflicts with base class, disable RUF012
+    # OpenAPI grouping — Litestar reads this as an instance var,
+    # so ClassVar conflicts with the base class.
     tags: list[str] = ["v1"]  # noqa: RUF012
 
-    # See app/fact_inventory/constants.py for the rationale behind this value.
+    # See app/fact_inventory/constants.py for the rationale.
     request_max_body_size: int = MAX_REQUEST_BODY_BYTES
 
     @post(
@@ -148,11 +158,11 @@ class HostFactController(Controller):
                 examples=[
                     Example(
                         summary="Fedora System",
-                        description="Example facts from a Fedora 42 installation",
+                        description=("Example facts from a Fedora 42 installation"),
                         value={
                             "system_facts": {
                                 "distribution": "Fedora",
-                                "distribution_file_path": "/etc/redhat-release",
+                                "distribution_file_path": ("/etc/redhat-release"),
                                 "distribution_file_variety": "RedHat",
                                 "distribution_major_version": "42",
                                 "distribution_version": "42",
@@ -168,38 +178,28 @@ class HostFactController(Controller):
                                         "version": "2.41",
                                     }
                                 ],
-                                "glibc-common": [
-                                    {
-                                        "arch": "x86_64",
-                                        "epoch": "null",
-                                        "name": "glibc-common",
-                                        "release": "11.fc42",
-                                        "source": "rpm",
-                                        "version": "2.41",
-                                    }
-                                ],
                             },
                         },
                     ),
                     Example(
                         summary="Minimal facts",
-                        description="Minimum required data, technically none",
-                        value={"system_facts": {}, "package_facts": {}},
+                        description="Minimum required data",
+                        value={
+                            "system_facts": {},
+                            "package_facts": {},
+                        },
                     ),
                 ]
             ),
         ],
         request: Request[Any, Any, Any],
         db_session: AsyncSession,
-        # Default 27 is the standalone fallback; host apps override via Provide.
-        rate_limit_minutes: Annotated[int, Dependency()] = 27,
     ) -> Response[Any]:
-        """
-        Perform the actual insertion into the database.
+        """Store submitted system and package facts.
 
-        This includes checks for rate limits.
-
-        Parameters are automatically checked for sanity by this point.
+        The request body is validated by the DTO layer.  Rate limiting
+        is enforced by the ``RateLimitMiddleware`` before this handler
+        is reached.
         """
         if request.client is None:
             raise HTTPException(
@@ -209,42 +209,20 @@ class HostFactController(Controller):
         client_address = request.client.host
         logger.info("Facts submission from %s", client_address)
 
-        # --------------------------------------------------------------
-        # Setup database connection scoped to HostFacts
-        # --------------------------------------------------------------
         try:
             host_service = HostFactsService(db_session)
         except Exception:
             logger.exception(
-                "Unexpected error generating session for %s", client_address
+                "Unexpected error generating session for %s",
+                client_address,
             )
             raise HTTPException(
                 detail="Internal server error",
                 status_code=HTTP_500_INTERNAL_SERVER_ERROR,
             ) from None
 
-        # --------------------------------------------------------------
-        # Rate Limit (per IP)
-        # --------------------------------------------------------------
-        if await host_service.rate_limit_exceeded(client_address, rate_limit_minutes):
-            delay = rate_limit_minutes + 1
-            logger.warning("Rate limit hit for %s", client_address)
-
-            # Always back off a full minute beyond the rate limit window.
-            # Even if the caller has close to being granted access, we
-            # intentionally extend the pause so the server does not need
-            # to compute a precise remaining time value for clients.
-            raise HTTPException(
-                detail=f"Rate limit exceeded. Wait {delay} minutes",
-                status_code=HTTP_429_TOO_MANY_REQUESTS,
-                headers={"Retry-After": str(delay * 60)},
-            )
-
-        # --------------------------------------------------------------
-        # Store the facts in the database
-        # --------------------------------------------------------------
         try:
-            await host_service.save_client(
+            await host_service.upsert_host_facts(
                 data={
                     "client_address": client_address,
                     "system_facts": data.system_facts,
@@ -271,7 +249,7 @@ class HostFactController(Controller):
             len(data.package_facts),
         )
         return Response(
-            content={"detail": f"Facts stored successfully for {client_address}"},
+            content={"detail": (f"Facts stored successfully for {client_address}")},
             status_code=HTTP_201_CREATED,
             media_type="application/json",
         )
