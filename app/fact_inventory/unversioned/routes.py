@@ -73,9 +73,9 @@ async def health_check() -> ServiceStatusResponse:
     tags=["health"],
     summary="Database readiness check",
     description=(
-        "Returns HTTP 200 when the application can reach the database."
-        " Runs a lightweight SELECT 1 query.  Returns HTTP 503 if the"
-        " database is unreachable.  Use this as a readiness probe;"
+        "Returns HTTP 200 when the application can reach its required services."
+        " Runs a lightweight connectivity check.  Returns HTTP 503 if a required"
+        " service dependency is unreachable.  Use this as a readiness probe;"
         " use the /health endpoint as a liveness probe."
     ),
     include_in_schema=True,
@@ -86,7 +86,7 @@ async def health_check() -> ServiceStatusResponse:
             examples=[
                 Example(
                     summary="Ready",
-                    description="The application can reach the database.",
+                    description="The application and all required dependencies are reachable.",
                     value={"status": "ok", "service": "fact_inventory"},
                 )
             ],
@@ -96,22 +96,22 @@ async def health_check() -> ServiceStatusResponse:
             description="Service Unavailable",
             examples=[
                 Example(
-                    summary="Database unreachable",
-                    description="The SELECT 1 probe could not reach the database.",
-                    value={"detail": "Database unavailable"},
+                    summary="Service unavailable",
+                    description="A required service dependency could not be reached.",
+                    value={"detail": "Service unavailable"},
                 )
             ],
         ),
     },
 )
 async def ready_check(db_session: AsyncSession) -> ServiceStatusResponse:
-    """Verify database connectivity with a SELECT 1 query."""
+    """Verify service connectivity."""
     try:
         await db_session.execute(text("SELECT 1"))
     except Exception:
-        logger.exception("Readiness check failed - database unreachable")
+        logger.exception("Readiness check failed - dependency unreachable")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database unavailable",
+            detail="Service unavailable",
         ) from None
     return ServiceStatusResponse(status="ok", service="fact_inventory")

@@ -59,19 +59,19 @@ _SUBMIT_ERROR_RESPONSES: dict = {
         examples=[
             Example(
                 summary="Missing client address",
-                description="Litestar could not resolve the connecting client's IP address.",
+                description="The server could not resolve the connecting client's IP address.",
                 value={"detail": "Unable to determine client address"},
             )
         ],
     ),
     HTTP_409_CONFLICT: ResponseSpec(
         data_container=DetailResponse,
-        description="Conflict — a database error prevented the record from being stored",
+        description="Conflict — the record could not be stored",
         examples=[
             Example(
-                summary="Database write failed",
-                description="A SQLAlchemy error was raised while persisting the facts.",
-                value={"detail": "Database error: unable to store record"},
+                summary="Record could not be stored",
+                description="An error occurred while persisting the facts.",
+                value={"detail": "Unable to store record"},
             )
         ],
     ),
@@ -81,7 +81,7 @@ _SUBMIT_ERROR_RESPONSES: dict = {
         examples=[
             Example(
                 summary="Body too large",
-                description="The submitted payload exceeds MAX_REQUEST_BODY_BYTES.",
+                description="The submitted payload exceeds the maximum allowed size.",
                 value={"detail": "Request Entity Too Large"},
             )
         ],
@@ -100,12 +100,12 @@ _SUBMIT_ERROR_RESPONSES: dict = {
     ),
     HTTP_500_INTERNAL_SERVER_ERROR: ResponseSpec(
         data_container=DetailResponse,
-        description="Internal Server Error — an unexpected error occurred while processing",
+        description="Internal Server Error — an unexpected error occurred",
         examples=[
             Example(
                 summary="Unexpected server error",
-                description="An unhandled exception was raised during fact storage.",
-                value={"detail": "Internal server error while processing"},
+                description="An unexpected error occurred; details are recorded server-side.",
+                value={"detail": "Internal server error"},
             )
         ],
     ),
@@ -213,7 +213,7 @@ class HostFactController(Controller):
                 "Unexpected error generating session for %s", client_address
             )
             raise HTTPException(
-                detail="Internal server error while connecting to database",
+                detail="Internal server error",
                 status_code=HTTP_500_INTERNAL_SERVER_ERROR,
             ) from None
 
@@ -248,13 +248,13 @@ class HostFactController(Controller):
         except SQLAlchemyError:
             logger.exception("Database error for %s", client_address)
             raise HTTPException(
-                detail="Database error: unable to store record",
+                detail="Unable to store record",
                 status_code=HTTP_409_CONFLICT,
             ) from None
         except Exception:
             logger.exception("Unexpected error for %s", client_address)
             raise HTTPException(
-                detail="Internal server error while processing",
+                detail="Internal server error",
                 status_code=HTTP_500_INTERNAL_SERVER_ERROR,
             ) from None
 

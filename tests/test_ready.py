@@ -78,6 +78,21 @@ class TestReadinessCheck:
             response = await client.get("/fact_inventory/ready")
         assert "detail" in response.json()
 
+    async def test_ready_db_failure_detail_is_safe(
+        self, client: AsyncTestClient
+    ) -> None:
+        """503 response must not reveal internal implementation details."""
+        with patch(
+            "sqlalchemy.ext.asyncio.AsyncSession.execute",
+            new_callable=AsyncMock,
+            side_effect=Exception("db unavailable"),
+        ):
+            response = await client.get("/fact_inventory/ready")
+        detail = response.json()["detail"].lower()
+        assert "database" not in detail
+        assert "sql" not in detail
+        assert "select" not in detail
+
     async def test_ready_repeated_calls_consistent(
         self,
         client: AsyncTestClient,
