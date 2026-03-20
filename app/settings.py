@@ -102,7 +102,7 @@ class Settings(BaseSettings):
     database_uri: str = Field(...)
     app_name: str = "host_inventory"
     fact_inventory_prefix: str = "fact_inventory"
-    rate_limit_minutes: int = 27
+    rate_limit_minutes: int = 90
     create_all: bool = True
     db_pool_size: int = 10
     db_pool_max_overflow: int = 20
