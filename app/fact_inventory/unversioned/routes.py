@@ -12,6 +12,8 @@ from dataclasses import dataclass
 
 from litestar import get
 from litestar.exceptions import HTTPException
+from litestar.openapi.datastructures import ResponseSpec
+from litestar.openapi.spec import Example
 from litestar.status_codes import HTTP_200_OK, HTTP_503_SERVICE_UNAVAILABLE
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +29,13 @@ class ServiceStatusResponse:
     service: str
 
 
+@dataclass
+class ErrorDetail:
+    """Response body returned when an endpoint cannot satisfy the request."""
+
+    detail: str
+
+
 @get(
     "/health",
     status_code=HTTP_200_OK,
@@ -39,6 +48,19 @@ class ServiceStatusResponse:
         " probe."
     ),
     include_in_schema=True,
+    responses={
+        HTTP_200_OK: ResponseSpec(
+            data_container=ServiceStatusResponse,
+            description="Service is alive",
+            examples=[
+                Example(
+                    summary="Healthy",
+                    description="The application process is running normally.",
+                    value={"status": "ok", "service": "fact_inventory"},
+                )
+            ],
+        ),
+    },
 )
 async def health_check() -> ServiceStatusResponse:
     """Return a simple alive/ready signal for the fact_inventory service."""
@@ -57,6 +79,30 @@ async def health_check() -> ServiceStatusResponse:
         " use the /health endpoint as a liveness probe."
     ),
     include_in_schema=True,
+    responses={
+        HTTP_200_OK: ResponseSpec(
+            data_container=ServiceStatusResponse,
+            description="Service is ready",
+            examples=[
+                Example(
+                    summary="Ready",
+                    description="The application can reach the database.",
+                    value={"status": "ok", "service": "fact_inventory"},
+                )
+            ],
+        ),
+        HTTP_503_SERVICE_UNAVAILABLE: ResponseSpec(
+            data_container=ErrorDetail,
+            description="Service Unavailable",
+            examples=[
+                Example(
+                    summary="Database unreachable",
+                    description="The SELECT 1 probe could not reach the database.",
+                    value={"detail": "Database unavailable"},
+                )
+            ],
+        ),
+    },
 )
 async def ready_check(db_session: AsyncSession) -> ServiceStatusResponse:
     """Verify database connectivity with a SELECT 1 query."""

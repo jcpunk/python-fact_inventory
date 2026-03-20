@@ -88,9 +88,9 @@ def create_app() -> Litestar:
     prometheus_config = PrometheusConfig(app_name=settings.app_name)
 
     # ------------------------------------------------------------------
-    # Mount fact_inventory under the configured app_name prefix so that
-    # the sub-application is completely prefix-agnostic and the host app
-    # controls the URL namespace via a standard Litestar Router.
+    # Mount fact_inventory under the configured fact_inventory_prefix so
+    # that the sub-application is completely prefix-agnostic and the host
+    # app controls the URL namespace via a standard Litestar Router.
     # ------------------------------------------------------------------
     fact_inventory_router = Router(
         path=f"/{settings.fact_inventory_prefix}",
