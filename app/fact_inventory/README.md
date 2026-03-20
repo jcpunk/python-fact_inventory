@@ -33,29 +33,63 @@ application. The plugin provides an `AsyncSession` through Litestar's
 dependency-injection system, which fact_inventory injects into its handlers
 automatically.
 
-## Optional Litestar dependencies
+## Optional host-application configuration
 
-### `rate_limit_minutes` (`int`, default `27`)
+### Rate limiting (`RateLimitMiddleware`)
 
-Minimum minutes that must elapse between successive fact submissions from the
-same client IP address. fact_inventory declares this as a
-`Dependency(default=27)` on its handler, so it works out of the box. To
-override, register a `Provide` at the application level:
+Rate limiting is handled by Litestar's built-in `RateLimitMiddleware`.
+fact_inventory itself contains no rate-limit logic; the host application is
+responsible for applying the middleware to the router:
 
 ```python
 from litestar import Litestar, Router
-from litestar.di import Provide
+from litestar.middleware.rate_limit import RateLimitConfig
+
+rate_limit_config = RateLimitConfig(
+    rate_limit=("hour", 1),
+    exclude=["/health$", "/ready$"],
+)
 
 app = Litestar(
     route_handlers=[
-        Router(path="/fact_inventory", route_handlers=route_handlers),
+        Router(
+            path="/fact_inventory",
+            route_handlers=route_handlers,
+            middleware=[rate_limit_config.middleware],
+        ),
     ],
-    dependencies={
-        "rate_limit_minutes": Provide(lambda: 60, sync_to_thread=False),
-    },
     plugins=[SQLAlchemyPlugin(...)],
 )
 ```
+
+The bundled application factory reads `RATE_LIMIT_UNIT` (default `hour`) and
+`RATE_LIMIT_MAX_REQUESTS` (default `1`) from settings. Health and readiness
+probes are excluded from rate limiting.
+
+### `DailyCleanupPlugin`
+
+The `DailyCleanupPlugin` (in `app/fact_inventory/plugins/cleanup.py`)
+implements Litestar's `InitPluginProtocol` to run a periodic background task
+that deletes host records older than `RETENTION_DAYS` (default `365`). The
+cleanup interval is controlled by `CLEANUP_INTERVAL_HOURS` (default `24`).
+
+```python
+from app.fact_inventory.plugins import DailyCleanupPlugin
+
+cleanup_plugin = DailyCleanupPlugin(
+    cleanup_fn=purge_expired_hosts,
+    interval_seconds=24 * 3600,
+    name="host-retention-cleanup",
+)
+
+app = Litestar(
+    plugins=[SQLAlchemyPlugin(...), cleanup_plugin],
+    ...
+)
+```
+
+The plugin is self-contained within the fact_inventory package and uses
+`lifespan` context managers -- no `on_startup`/`on_shutdown` hooks are needed.
 
 ## Routes
 

@@ -1,6 +1,4 @@
-"""
-We store our model schema here
-"""
+"""Database model for the ``host_facts`` table."""
 
 from typing import Any
 
@@ -83,7 +81,7 @@ class HostFacts(UUIDAuditBase):
         Index(
             "ix_host_facts_client_address_updated_at", "client_address", "updated_at"
         ),
-        ## PostgreSQL : GIN indexes for efficient JSON querying
+        # PostgreSQL: GIN indexes for efficient JSON querying
         Index("ix_host_facts_system_facts", "system_facts", postgresql_using="gin"),
         Index("ix_host_facts_package_facts", "package_facts", postgresql_using="gin"),
     )

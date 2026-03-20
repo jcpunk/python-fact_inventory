@@ -167,3 +167,9 @@ class TestReadinessCheck:
             health = await client.get("/fact_inventory/health")
         assert ready.status_code == HTTP_503_SERVICE_UNAVAILABLE
         assert health.status_code == HTTP_200_OK
+
+    async def test_ready_not_rate_limited(self, client: AsyncTestClient) -> None:
+        """Readiness probe must never be throttled by the rate limiter."""
+        for _ in range(5):
+            response = await client.get("/fact_inventory/ready")
+            assert response.status_code == HTTP_200_OK

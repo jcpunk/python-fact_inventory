@@ -11,17 +11,22 @@ Consumers should import and use that object directly::
     uri = settings.database_uri
 
 Configurable elements (production):
-  - DATABASE_URI: str          (required)
-  - APP_NAME: str              (default "fact_inventory")
-  - RATE_LIMIT_MINUTES: int    (default 27)
-  - CREATE_ALL: bool           (default True)
-  - DB_POOL_SIZE: int          (default 10)
-  - DB_POOL_MAX_OVERFLOW: int  (default 20)
-  - DB_POOL_TIMEOUT: int       (default 30)
-  - LOG_LEVEL: str             (default "INFO"; overridden to "DEBUG" when DEBUG=true)
-  - DEBUG: bool                (default False)
-  - VERSION: str               (default: package metadata for APP_NAME -> git commit ->
-                                "unknown")
+  - DATABASE_URI: str              (required)
+  - APP_NAME: str                  (default "host_inventory")
+  - FACT_INVENTORY_PREFIX: str     (default "fact_inventory")
+  - RATE_LIMIT_UNIT: str           (default "hour"; second/minute/hour/day)
+  - RATE_LIMIT_MAX_REQUESTS: int   (default 1)
+  - RETENTION_DAYS: int            (default 365)
+  - CLEANUP_INTERVAL_HOURS: int    (default 24)
+  - CREATE_ALL: bool               (default True)
+  - DB_POOL_SIZE: int              (default 10)
+  - DB_POOL_MAX_OVERFLOW: int      (default 20)
+  - DB_POOL_TIMEOUT: int           (default 30)
+  - LOG_LEVEL: str                 (default "INFO"; overridden to "DEBUG"
+                                    when DEBUG=true)
+  - DEBUG: bool                    (default False)
+  - VERSION: str                   (default: package metadata,
+                                    then git commit, then "unknown")
 
 Additional configurable elements (for development with uvicorn):
   - HOST: str = see main.py
@@ -36,7 +41,7 @@ import subprocess
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _package_version
 from pathlib import Path
-from typing import Self
+from typing import Literal, Self
 
 from litestar.logging import LoggingConfig
 from pydantic import Field, model_validator
@@ -44,6 +49,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 RUNTIME = os.getenv("RUNTIME", "testing")
 _ENV_FILE = Path(f".env.{RUNTIME}")
+
+#: Valid values for :attr:`Settings.rate_limit_unit`.
+DurationUnit = Literal["second", "minute", "hour", "day"]
 
 
 def _get_version(package_name: str) -> str:
@@ -102,11 +110,14 @@ class Settings(BaseSettings):
     database_uri: str = Field(...)
     app_name: str = "host_inventory"
     fact_inventory_prefix: str = "fact_inventory"
-    rate_limit_minutes: int = 90
+    rate_limit_unit: DurationUnit = "hour"
+    rate_limit_max_requests: int = Field(default=1, ge=1)
+    retention_days: int = Field(default=365, ge=1)
+    cleanup_interval_hours: int = Field(default=24, ge=1)
     create_all: bool = True
-    db_pool_size: int = 10
-    db_pool_max_overflow: int = 20
-    db_pool_timeout: int = 30
+    db_pool_size: int = Field(default=10, ge=1)
+    db_pool_max_overflow: int = Field(default=20, ge=0)
+    db_pool_timeout: int = Field(default=30, ge=1)
     log_level: str = "INFO"
     debug: bool = False
     version: str = "unknown"

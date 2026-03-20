@@ -39,7 +39,7 @@ asyncio_default_fixture_loop_scope = "session"
 
 [tool.ruff]
 fix = true
-src = ["app", "test"]
+src = ["app", "tests"]
 
 [tool.ruff.lint]
 extend-select = [

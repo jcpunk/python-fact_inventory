@@ -2,7 +2,6 @@
 Tests for the FactController HTTP endpoints.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, patch
 
 from app.fact_inventory.v1.services import HostFactsService
@@ -244,7 +243,13 @@ class TestFactControllerSubmit:
         self,
         client: AsyncTestClient,
     ) -> None:
-        """Test that rate limiting works for repeated submissions."""
+        """Test that rate limiting works for repeated submissions.
+
+        Rate limiting is handled by Litestar's ``RateLimitMiddleware``
+        (configured in the application factory).  The test environment
+        uses ``RATE_LIMIT_UNIT=second`` / ``RATE_LIMIT_MAX_REQUESTS=1``
+        so the second request within the same second is rejected.
+        """
         # First submission should succeed
         response1 = await client.post(
             "/fact_inventory/v1/facts",
@@ -254,9 +259,6 @@ class TestFactControllerSubmit:
             },
         )
         assert response1.status_code == HTTP_201_CREATED
-        assert response1.headers.get("Retry-After") is None
-
-        await asyncio.sleep(6)
 
         # Second immediate submission should be rate limited
         response2 = await client.post(
@@ -268,10 +270,6 @@ class TestFactControllerSubmit:
         )
 
         assert response2.status_code == HTTP_429_TOO_MANY_REQUESTS
-        assert "Rate limit exceeded" in response2.text
-        assert "Retry-After" in response2.headers
-        assert int(response2.headers.get("Retry-After")) > 0
-        # Response must be well-formed JSON with a detail key
         assert "application/json" in response2.headers["content-type"]
         assert "detail" in response2.json()
 
@@ -335,7 +333,7 @@ class TestFactControllerSubmit:
         assert set(response.json().keys()) == {"detail"}
 
     # ------------------------------------------------------------------
-    # 409 path — storage layer failure
+    # 409 path -- storage layer failure
     # ------------------------------------------------------------------
 
     async def test_submit_storage_failure_returns_409(
@@ -344,7 +342,7 @@ class TestFactControllerSubmit:
         """A storage error must return HTTP 409."""
         with patch.object(
             HostFactsService,
-            "save_client",
+            "upsert_host_facts",
             new_callable=AsyncMock,
             side_effect=SQLAlchemyError("simulated write failure"),
         ):
@@ -360,7 +358,7 @@ class TestFactControllerSubmit:
         """409 response must be JSON."""
         with patch.object(
             HostFactsService,
-            "save_client",
+            "upsert_host_facts",
             new_callable=AsyncMock,
             side_effect=SQLAlchemyError("simulated write failure"),
         ):
@@ -376,7 +374,7 @@ class TestFactControllerSubmit:
         """409 response body must contain a 'detail' key."""
         with patch.object(
             HostFactsService,
-            "save_client",
+            "upsert_host_facts",
             new_callable=AsyncMock,
             side_effect=SQLAlchemyError("simulated write failure"),
         ):
@@ -392,7 +390,7 @@ class TestFactControllerSubmit:
         """409 detail must not reveal internal storage implementation details."""
         with patch.object(
             HostFactsService,
-            "save_client",
+            "upsert_host_facts",
             new_callable=AsyncMock,
             side_effect=SQLAlchemyError("simulated write failure"),
         ):
@@ -406,7 +404,7 @@ class TestFactControllerSubmit:
         assert "simulated write failure" not in detail
 
     # ------------------------------------------------------------------
-    # 500 path — unexpected exception
+    # 500 path -- unexpected exception
     # ------------------------------------------------------------------
 
     async def test_submit_unexpected_error_returns_500(
@@ -415,7 +413,7 @@ class TestFactControllerSubmit:
         """An unexpected exception during storage must return HTTP 500."""
         with patch.object(
             HostFactsService,
-            "save_client",
+            "upsert_host_facts",
             new_callable=AsyncMock,
             side_effect=RuntimeError("something went very wrong"),
         ):
@@ -426,7 +424,7 @@ class TestFactControllerSubmit:
         assert response.status_code == HTTP_500_INTERNAL_SERVER_ERROR
 
     # ------------------------------------------------------------------
-    # Valid payload content — accepted value types inside facts dicts
+    # Valid payload content -- accepted value types inside facts dicts
     # ------------------------------------------------------------------
 
     async def test_submit_null_values_in_system_facts(
