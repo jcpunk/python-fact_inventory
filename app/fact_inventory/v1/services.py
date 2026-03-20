@@ -3,7 +3,6 @@ from typing import Any
 
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
 
-from ...settings import RATE_LIMIT_MINUTES
 from ..schemas.hostfacts import HostFacts, HostFactsRepository
 
 
@@ -18,9 +17,11 @@ class HostFactsService(SQLAlchemyAsyncRepositoryService[HostFacts]):
     repository_type = HostFactsRepository
     repository: HostFactsRepository
 
-    async def rate_limit_exceeded(self, client_address: str) -> bool:
+    async def rate_limit_exceeded(
+        self, client_address: str, rate_limit_minutes: int
+    ) -> bool:
         threshold = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(
-            minutes=RATE_LIMIT_MINUTES
+            minutes=rate_limit_minutes
         )
         return await self.repository.exists_recent_update_for_client(
             client_address, threshold

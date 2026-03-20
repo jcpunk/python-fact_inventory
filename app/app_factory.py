@@ -18,6 +18,7 @@ from advanced_alchemy.extensions.litestar.plugins.init.config.engine import (
 from litestar import Litestar
 from litestar.config.cors import CORSConfig
 from litestar.contrib.opentelemetry import OpenTelemetryConfig
+from litestar.di import Provide
 from litestar.openapi.config import OpenAPIConfig
 from litestar.plugins.prometheus import PrometheusConfig, PrometheusController
 
@@ -37,6 +38,11 @@ from .settings import (
     logging_config,
 )
 from .validate_ip import validate_ip_middleware
+
+
+def _get_rate_limit_minutes() -> int:
+    """Provide the configured rate-limit window to fact_inventory's DI system."""
+    return RATE_LIMIT_MINUTES
 
 
 async def _on_startup(app: Litestar) -> None:
@@ -110,6 +116,11 @@ def create_app() -> Litestar:
     # ------------------------------------------------------------------
     app_config: dict[str, Any] = {
         "route_handlers": [*routes, PrometheusController],
+        "dependencies": {
+            "rate_limit_minutes": Provide(
+                _get_rate_limit_minutes, sync_to_thread=False
+            ),
+        },
         "plugins": [SQLAlchemyPlugin(config=alchemy_config)],
         "middleware": [
             otel_config.middleware,

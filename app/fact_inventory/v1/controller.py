@@ -1,10 +1,11 @@
+import logging
 from typing import Annotated, Any
 
 from litestar import Controller, Request, Response, post
 from litestar.exceptions import HTTPException
 from litestar.openapi.datastructures import ResponseSpec
 from litestar.openapi.spec import Example
-from litestar.params import Body
+from litestar.params import Body, Dependency
 from litestar.status_codes import (
     HTTP_201_CREATED,
     HTTP_400_BAD_REQUEST,
@@ -17,9 +18,10 @@ from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...settings import RATE_LIMIT_MINUTES, logger
 from ..schemas.hostfacts import HostFacts, HostFactsWriteAPI
 from .services import HostFactsService
+
+logger = logging.getLogger(__name__)
 
 
 class DetailResponse(BaseModel):
@@ -169,6 +171,7 @@ class HostFactController(Controller):
         ],
         request: Request[Any, Any, Any],
         db_session: AsyncSession,
+        rate_limit_minutes: Annotated[int, Dependency()] = 27,
     ) -> Response[Any]:
         """
         Perform the actual insertion into the database.
@@ -202,8 +205,8 @@ class HostFactController(Controller):
         # --------------------------------------------------------------
         # Rate Limit (per IP)
         # --------------------------------------------------------------
-        if await host_service.rate_limit_exceeded(client_address):
-            delay = RATE_LIMIT_MINUTES + 1
+        if await host_service.rate_limit_exceeded(client_address, rate_limit_minutes):
+            delay = rate_limit_minutes + 1
             logger.warning("Rate limit hit for %s", client_address)
 
             # Always back off a full minute beyond the rate limit window.

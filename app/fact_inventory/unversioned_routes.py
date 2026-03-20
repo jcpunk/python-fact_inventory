@@ -7,6 +7,7 @@ The paths are rooted at /fact_inventory so the health check is clearly
 scoped to this application.
 """
 
+import logging
 from dataclasses import dataclass
 
 from litestar import Router, get
@@ -15,20 +16,12 @@ from litestar.status_codes import HTTP_200_OK, HTTP_503_SERVICE_UNAVAILABLE
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..settings import logger
+logger = logging.getLogger(__name__)
 
 
 @dataclass
-class HealthResponse:
-    """Response body returned by the liveness check endpoint."""
-
-    status: str
-    service: str
-
-
-@dataclass
-class ReadinessResponse:
-    """Response body returned by the readiness check endpoint."""
+class ServiceStatusResponse:
+    """Response body returned by both the liveness and readiness endpoints."""
 
     status: str
     service: str
@@ -47,9 +40,9 @@ class ReadinessResponse:
     ),
     include_in_schema=True,
 )
-async def health_check() -> HealthResponse:
+async def health_check() -> ServiceStatusResponse:
     """Return a simple alive/ready signal for the fact_inventory service."""
-    return HealthResponse(status="ok", service="fact_inventory")
+    return ServiceStatusResponse(status="ok", service="fact_inventory")
 
 
 @get(
@@ -65,7 +58,7 @@ async def health_check() -> HealthResponse:
     ),
     include_in_schema=True,
 )
-async def ready_check(db_session: AsyncSession) -> ReadinessResponse:
+async def ready_check(db_session: AsyncSession) -> ServiceStatusResponse:
     """Verify database connectivity with a SELECT 1 query."""
     try:
         await db_session.execute(text("SELECT 1"))
@@ -75,7 +68,7 @@ async def ready_check(db_session: AsyncSession) -> ReadinessResponse:
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database unavailable",
         ) from None
-    return ReadinessResponse(status="ok", service="fact_inventory")
+    return ServiceStatusResponse(status="ok", service="fact_inventory")
 
 
 # Router rooted at /fact_inventory so full paths are:

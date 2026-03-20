@@ -28,7 +28,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from litestar.logging import LoggingConfig
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # ----------------------------------------------------------------------
@@ -58,7 +58,7 @@ class Settings(BaseSettings):
         populate_by_name=True,
     )
 
-    database_uri: str = ...  # type: ignore[assignment]  # required — no default
+    database_uri: str = Field(...)  # required — no default
     rate_limit_minutes: int = 27
     create_all: bool = True
     db_pool_size: int = 10
