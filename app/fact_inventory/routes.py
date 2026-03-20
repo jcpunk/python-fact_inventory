@@ -1,9 +1,9 @@
 """
 Route registry for the fact_inventory application.
 
-Import ``routes`` from here to get all handlers — both the unversioned
+Import ``routes`` from here to get all handlers - both the unversioned
 operational routes (e.g. /fact_inventory/health) and every versioned API
-router — in a single list ready to pass to Litestar.
+router - in a single list ready to pass to Litestar.
 
 Usage in the application factory::
 

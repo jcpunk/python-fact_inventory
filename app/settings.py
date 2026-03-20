@@ -74,7 +74,7 @@ def _get_version() -> str:
 
 
 # ----------------------------------------------------------------------
-# Settings model — reads from environment and .env file
+# Settings model - reads from environment and .env file
 # ----------------------------------------------------------------------
 class Settings(BaseSettings):
     """Application settings loaded from environment variables and .env file."""
@@ -111,7 +111,7 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # ----------------------------------------------------------------------
-# Logging infrastructure — built from the resolved settings and applied
+# Logging infrastructure - built from the resolved settings and applied
 # immediately so every module-level logger created at import time
 # (including this one) uses the correct level, handler, and formatter.
 # ----------------------------------------------------------------------

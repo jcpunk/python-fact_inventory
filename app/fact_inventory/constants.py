@@ -9,7 +9,7 @@ can be found without hunting through business-logic code.
 # Maximum number of bytes allowed for a single JSON field
 # (system_facts or package_facts).  Validated before the record is
 # written to the database to avoid storing extremely large blobs.
-MAX_JSON_FIELD_BYTES: int = 1024 * 1024 * 4  # 4 MiB — educated guess
+MAX_JSON_FIELD_BYTES: int = 1024 * 1024 * 4  # 4 MiB - educated guess
 
 # Maximum number of bytes Litestar will read from the raw request body
 # before rejecting the upload.  Must be larger than two MAX_JSON_FIELD_BYTES

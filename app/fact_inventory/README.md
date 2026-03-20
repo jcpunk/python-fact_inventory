@@ -52,8 +52,8 @@ app = Litestar(
 
 | Method | Path                       | Description                                              |
 |--------|----------------------------|----------------------------------------------------------|
-| `GET`  | `/fact_inventory/health`   | Liveness probe — HTTP 200 while the process is alive.  No database dependency; safe for fast liveness checks. |
-| `GET`  | `/fact_inventory/ready`    | Readiness probe — HTTP 200 when the database is reachable (`SELECT 1`), HTTP 503 otherwise. |
+| `GET`  | `/fact_inventory/health`   | Liveness probe - HTTP 200 while the process is alive.  No database dependency; safe for fast liveness checks. |
+| `GET`  | `/fact_inventory/ready`    | Readiness probe - HTTP 200 when the database is reachable (`SELECT 1`), HTTP 503 otherwise. |
 | `POST` | `/v1/facts`                | Submit system and package facts for the calling host.    |
 
 ## Size limits

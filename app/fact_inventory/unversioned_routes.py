@@ -2,7 +2,7 @@
 Unversioned routes for the fact_inventory application.
 
 These routes are not tied to any API version and are intended for
-operational use — e.g. load-balancer health checks and readiness probes.
+operational use - e.g. load-balancer health checks and readiness probes.
 The paths are rooted at /fact_inventory so the health check is clearly
 scoped to this application.
 """
@@ -63,7 +63,7 @@ async def ready_check(db_session: AsyncSession) -> ServiceStatusResponse:
     try:
         await db_session.execute(text("SELECT 1"))
     except Exception:
-        logger.exception("Readiness check failed — database unreachable")
+        logger.exception("Readiness check failed - database unreachable")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database unavailable",
