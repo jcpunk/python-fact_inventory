@@ -31,6 +31,87 @@ class DetailResponse(BaseModel):
     detail: str
 
 
+# ---------------------------------------------------------------------------
+# OpenAPI response specs for HostFactController.submit
+# Kept as module-level dicts so that success and error cases are clearly
+# separated and each entry can carry a precise, actionable description.
+# ---------------------------------------------------------------------------
+
+_SUBMIT_SUCCESS_RESPONSES: dict = {
+    HTTP_201_CREATED: ResponseSpec(
+        data_container=DetailResponse,
+        description="Facts stored successfully",
+        examples=[
+            Example(
+                summary="Record created",
+                description="The facts have been stored in the database."
+                " Note: this does not return a URL to review the record.",
+                value={"detail": "Facts stored successfully for 192.0.2.1"},
+            )
+        ],
+    ),
+}
+
+_SUBMIT_ERROR_RESPONSES: dict = {
+    HTTP_400_BAD_REQUEST: ResponseSpec(
+        data_container=DetailResponse,
+        description="Bad Request — the client address could not be determined",
+        examples=[
+            Example(
+                summary="Missing client address",
+                description="Litestar could not resolve the connecting client's IP address.",
+                value={"detail": "Unable to determine client address"},
+            )
+        ],
+    ),
+    HTTP_409_CONFLICT: ResponseSpec(
+        data_container=DetailResponse,
+        description="Conflict — a database error prevented the record from being stored",
+        examples=[
+            Example(
+                summary="Database write failed",
+                description="A SQLAlchemy error was raised while persisting the facts.",
+                value={"detail": "Database error: unable to store record"},
+            )
+        ],
+    ),
+    HTTP_413_REQUEST_ENTITY_TOO_LARGE: ResponseSpec(
+        data_container=DetailResponse,
+        description="Payload Too Large — the request body exceeds the configured size limit",
+        examples=[
+            Example(
+                summary="Body too large",
+                description="The submitted payload exceeds MAX_REQUEST_BODY_BYTES.",
+                value={"detail": "Request Entity Too Large"},
+            )
+        ],
+    ),
+    HTTP_429_TOO_MANY_REQUESTS: ResponseSpec(
+        data_container=DetailResponse,
+        description="Too Many Requests — this client IP submitted facts too recently",
+        examples=[
+            Example(
+                summary="Rate limit exceeded",
+                description="The client must wait before submitting again."
+                " Check the Retry-After response header for the exact delay.",
+                value={"detail": "Rate limit exceeded. Wait 28 minutes"},
+            )
+        ],
+    ),
+    HTTP_500_INTERNAL_SERVER_ERROR: ResponseSpec(
+        data_container=DetailResponse,
+        description="Internal Server Error — an unexpected error occurred while processing",
+        examples=[
+            Example(
+                summary="Unexpected server error",
+                description="An unhandled exception was raised during fact storage.",
+                value={"detail": "Internal server error while processing"},
+            )
+        ],
+    ),
+}
+
+
 class HostFactController(Controller):
     """
     REST API controller for handling fact submissions.
@@ -51,77 +132,7 @@ class HostFactController(Controller):
         "",
         dto=HostFactsWriteAPI,
         description="Submit system and package facts",
-        responses={
-            HTTP_201_CREATED: ResponseSpec(
-                data_container=DetailResponse,
-                description="Record Created",
-                examples=[
-                    Example(
-                        summary="Resource record created",
-                        description="The facts have been stored in the database."
-                        " Note: this does not return a URL to review the record.",
-                        value={
-                            "detail": "Facts stored successfully for {client_address}"
-                        },
-                    )
-                ],
-            ),
-            HTTP_400_BAD_REQUEST: ResponseSpec(
-                data_container=DetailResponse,
-                description="Error Code",
-                examples=[
-                    Example(
-                        summary="Content Error",
-                        description="Something went wrong parsing the payload",
-                        value={"detail": "Error Message"},
-                    )
-                ],
-            ),
-            HTTP_409_CONFLICT: ResponseSpec(
-                data_container=DetailResponse,
-                description="Error Code",
-                examples=[
-                    Example(
-                        summary="Database Error",
-                        description="Something went wrong storing the record",
-                        value={"detail": "Database error message"},
-                    )
-                ],
-            ),
-            HTTP_413_REQUEST_ENTITY_TOO_LARGE: ResponseSpec(
-                data_container=DetailResponse,
-                description="Error Code",
-                examples=[
-                    Example(
-                        summary="Size Limit",
-                        description="The payload is too large",
-                        value={"detail": "Request Entity Too Large"},
-                    )
-                ],
-            ),
-            HTTP_429_TOO_MANY_REQUESTS: ResponseSpec(
-                data_container=DetailResponse,
-                description="Error Code",
-                examples=[
-                    Example(
-                        summary="Rate Limit",
-                        description="The client IP checked in too recently",
-                        value={"detail": "Rate limit exceeded. Wait {delay} minutes"},
-                    )
-                ],
-            ),
-            HTTP_500_INTERNAL_SERVER_ERROR: ResponseSpec(
-                data_container=DetailResponse,
-                description="Error Code",
-                examples=[
-                    Example(
-                        summary="Internal server error while processing",
-                        description="Something unexpected went wrong",
-                        value={"detail": "Internal server error while processing"},
-                    )
-                ],
-            ),
-        },
+        responses={**_SUBMIT_SUCCESS_RESPONSES, **_SUBMIT_ERROR_RESPONSES},
     )
     async def submit(
         self,
