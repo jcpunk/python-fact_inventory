@@ -95,12 +95,12 @@ class Settings(BaseSettings):
     db_pool_timeout: int = 30
     log_level: str = "INFO"
     debug: bool = False
-    version: str = ""
+    version: str = "unknown"
 
     @model_validator(mode="after")
     def _resolve_version(self) -> Self:
-        """Resolve version from package metadata using app_name when not set."""
-        if not self.version:
+        """Try to resolve version from package metadata using app_name."""
+        if self.version == "unknown":
             self.version = _get_version(self.app_name)
         return self
 
