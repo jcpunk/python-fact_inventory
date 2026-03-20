@@ -93,7 +93,7 @@ def create_app() -> Litestar:
     # controls the URL namespace via a standard Litestar Router.
     # ------------------------------------------------------------------
     fact_inventory_router = Router(
-        path=f"/{settings.app_name}",
+        path=f"/{settings.fact_inventory_prefix}",
         route_handlers=_fact_inventory_handlers,
     )
 

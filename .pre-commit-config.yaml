@@ -20,9 +20,10 @@ repos:
         name: Check variable types
         files: ^app/
         additional_dependencies:
-          - pydantic
-          - litestar
           - advanced-alchemy
+          - litestar
+          - pydantic
+          - pydantic_settings
 
   - repo: https://github.com/JoC0de/pre-commit-prettier
     rev: v3.7.4

@@ -18,6 +18,7 @@ Litestar ``Router``::
 """
 
 from litestar import Router
+from litestar.types import ControllerRouterHandler
 
 from .unversioned.routes import health_check, ready_check
 from .v1.controller import HostFactController as HostFactController_v1
@@ -29,4 +30,4 @@ _v1_router: Router = Router(
 )
 
 # All handlers at relative paths - no prefix applied here.
-route_handlers: list = [health_check, ready_check, _v1_router]
+route_handlers: list[ControllerRouterHandler] = [health_check, ready_check, _v1_router]

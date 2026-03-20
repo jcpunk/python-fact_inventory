@@ -78,11 +78,11 @@ def _get_version(package_name: str) -> str:
             text=True,
             check=True,
         )
+        return f"git-{result.stdout.strip()}"
     except subprocess.CalledProcessError:
-        _log.debug("git rev-parse failed; version will be reported as 'unknown'")
-        return "unknown"
+        _log.debug("git rev-parse failed; cannot fall back to commit hash")
 
-    return f"git-{result.stdout.strip()}"
+    return "unknown"
 
 
 # ----------------------------------------------------------------------
@@ -99,7 +99,8 @@ class Settings(BaseSettings):
     )
 
     database_uri: str = Field(...)
-    app_name: str = "fact_inventory"
+    app_name: str = "host_info"
+    fact_inventory_prefix: str = "fact_inventory"
     rate_limit_minutes: int = 27
     create_all: bool = True
     db_pool_size: int = 10
