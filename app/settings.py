@@ -20,7 +20,8 @@ Configurable elements (production):
   - DB_POOL_TIMEOUT: int       (default 30)
   - LOG_LEVEL: str             (default "INFO"; overridden to "DEBUG" when DEBUG=true)
   - DEBUG: bool                (default False)
-  - VERSION: str               (default: package metadata for APP_NAME → git commit → "unknown")
+  - VERSION: str               (default: package metadata for APP_NAME → git commit →
+                                "unknown")
 
 Additional configurable elements (for development with uvicorn):
   - HOST: str = see main.py
@@ -110,7 +111,9 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # ----------------------------------------------------------------------
-# Logging infrastructure — built from the resolved settings
+# Logging infrastructure — built from the resolved settings and applied
+# immediately so every module-level logger created at import time
+# (including this one) uses the correct level, handler, and formatter.
 # ----------------------------------------------------------------------
 logging_config = LoggingConfig(
     root={"level": logging.getLevelName(settings.log_level), "handlers": ["console"]},
@@ -118,5 +121,6 @@ logging_config = LoggingConfig(
         "standard": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"}
     },
 )
+logging_config.configure()
 
 logger = logging.getLogger(__name__)
