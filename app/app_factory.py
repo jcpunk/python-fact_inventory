@@ -21,7 +21,7 @@ from litestar.di import Provide
 from litestar.openapi.config import OpenAPIConfig
 from litestar.plugins.prometheus import PrometheusConfig, PrometheusController
 
-from .fact_inventory.routes import routes
+from .fact_inventory.routes import create_routes
 from .settings import logger, logging_config, settings
 
 
@@ -91,7 +91,7 @@ def create_app() -> Litestar:
     # Assemble the Litestar app config
     # ------------------------------------------------------------------
     app_config: dict[str, Any] = {
-        "route_handlers": [*routes, PrometheusController],
+        "route_handlers": [*create_routes(prefix=settings.app_name), PrometheusController],
         "dependencies": {
             "rate_limit_minutes": Provide(
                 _get_rate_limit_minutes, sync_to_thread=False

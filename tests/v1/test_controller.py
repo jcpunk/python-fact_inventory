@@ -14,7 +14,7 @@ from litestar.testing import AsyncTestClient
 
 
 class TestFactControllerSubmit:
-    """Tests for the POST /v1/facts endpoint."""
+    """Tests for the POST /fact_inventory/v1/facts endpoint."""
 
     async def test_submit_valid_params(
         self,
@@ -22,7 +22,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Test submitting valid fact data returns 200."""
         response = await client.post(
-            "/v1/facts",
+            "/fact_inventory/v1/facts",
             json={  # these are just example nonsense values
                 "system_facts": {
                     "os": "RHEL",
@@ -48,7 +48,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Test submitting minimal valid data."""
         response = await client.post(
-            "/v1/facts",
+            "/fact_inventory/v1/facts",
             json={
                 "system_facts": {},
                 "package_facts": {},
@@ -65,7 +65,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Test submitting empty but valid JSON objects."""
         response = await client.post(
-            "/v1/facts",
+            "/fact_inventory/v1/facts",
             json={"system_facts": {}, "package_facts": {}},
         )
 
@@ -92,7 +92,7 @@ class TestFactControllerSubmit:
             "package_facts": {},
         }
 
-        response = await client.post("/v1/facts", json=nested_facts)
+        response = await client.post("/fact_inventory/v1/facts", json=nested_facts)
 
         assert response.status_code == HTTP_201_CREATED
         assert "Facts stored successfully" in response.text
@@ -111,7 +111,7 @@ class TestFactControllerSubmit:
             "package_facts": {},
         }
 
-        response = await client.post("/v1/facts", json=unicode_facts)
+        response = await client.post("/fact_inventory/v1/facts", json=unicode_facts)
 
         assert response.status_code == HTTP_201_CREATED
         assert "Facts stored successfully" in response.text
@@ -129,7 +129,7 @@ class TestFactControllerSubmit:
             "package_facts": {},
         }
 
-        response = await client.post("/v1/facts", json=special_facts)
+        response = await client.post("/fact_inventory/v1/facts", json=special_facts)
 
         assert response.status_code == HTTP_201_CREATED
         assert "Facts stored successfully" in response.text
@@ -141,7 +141,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Test that missing system_facts field is rejected."""
         response = await client.post(
-            "/v1/facts",
+            "/fact_inventory/v1/facts",
             json={"package_facts": {}},
         )
 
@@ -153,7 +153,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Test that missing package_facts field is rejected."""
         response = await client.post(
-            "/v1/facts",
+            "/fact_inventory/v1/facts",
             json={"system_facts": {}},
         )
 
@@ -169,7 +169,7 @@ class TestFactControllerSubmit:
             "system_facts": {},
             "unknown_field": "should_fail",
         }
-        response = await client.post("/v1/facts", json=invalid_data)
+        response = await client.post("/fact_inventory/v1/facts", json=invalid_data)
 
         assert response.status_code == HTTP_400_BAD_REQUEST
 
@@ -179,7 +179,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Test that malformed JSON is rejected."""
         response = await client.post(
-            "/v1/facts",
+            "/fact_inventory/v1/facts",
             content="not valid json",
             headers={"Content-Type": "application/json"},
         )
@@ -192,7 +192,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Test that non-dict system_facts are rejected."""
         response = await client.post(
-            "/v1/facts",
+            "/fact_inventory/v1/facts",
             json={
                 "system_facts": "not a dict",
                 "package_facts": {},
@@ -207,7 +207,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Test that non-dict package_facts are rejected."""
         response = await client.post(
-            "/v1/facts",
+            "/fact_inventory/v1/facts",
             json={
                 "system_facts": {},
                 "package_facts": ["not", "a", "dict"],
@@ -230,7 +230,7 @@ class TestFactControllerSubmit:
             "package_facts": {},
         }
 
-        response = await client.post("/v1/facts", json=oversized_data)
+        response = await client.post("/fact_inventory/v1/facts", json=oversized_data)
 
         assert response.status_code == HTTP_413_REQUEST_ENTITY_TOO_LARGE
 
@@ -241,7 +241,7 @@ class TestFactControllerSubmit:
         """Test that rate limiting works for repeated submissions."""
         # First submission should succeed
         response1 = await client.post(
-            "/v1/facts",
+            "/fact_inventory/v1/facts",
             json={
                 "system_facts": {},
                 "package_facts": {},
@@ -254,7 +254,7 @@ class TestFactControllerSubmit:
 
         # Second immediate submission should be rate limited
         response2 = await client.post(
-            "/v1/facts",
+            "/fact_inventory/v1/facts",
             json={
                 "system_facts": {},
                 "package_facts": {},

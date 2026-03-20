@@ -3,17 +3,17 @@
 ASGI sub-application for collecting and storing system facts gathered by
 Ansible (or any compatible tool).  The package is intentionally independent of
 any specific application factory; the only public API integrators need is the
-`routes` list.
+`create_routes` function.
 
 ## Quick-start
 
 ```python
 from litestar import Litestar
 from advanced_alchemy.extensions.litestar import SQLAlchemyPlugin, SQLAlchemyAsyncConfig
-from app.fact_inventory.routes import routes
+from app.fact_inventory.routes import create_routes
 
 app = Litestar(
-    route_handlers=[*routes],
+    route_handlers=[*create_routes(prefix="fact_inventory")],
     plugins=[SQLAlchemyPlugin(config=SQLAlchemyAsyncConfig(...))],
 )
 ```
@@ -40,7 +40,7 @@ override, register a `Provide` at the application level:
 from litestar.di import Provide
 
 app = Litestar(
-    route_handlers=[*routes],
+    route_handlers=[*create_routes(prefix="fact_inventory")],
     dependencies={
         "rate_limit_minutes": Provide(lambda: 60, sync_to_thread=False),
     },
@@ -50,11 +50,14 @@ app = Litestar(
 
 ## Routes
 
-| Method | Path                       | Description                                              |
-|--------|----------------------------|----------------------------------------------------------|
-| `GET`  | `/fact_inventory/health`   | Liveness probe - HTTP 200 while the process is alive.  No database dependency; safe for fast liveness checks. |
-| `GET`  | `/fact_inventory/ready`    | Readiness probe - HTTP 200 when the database is reachable (`SELECT 1`), HTTP 503 otherwise. |
-| `POST` | `/v1/facts`                | Submit system and package facts for the calling host.    |
+The `prefix` argument to `create_routes` controls the leading path segment for
+all routes (default: `"fact_inventory"`).
+
+| Method | Path                         | Description                                              |
+|--------|------------------------------|----------------------------------------------------------|
+| `GET`  | `/{prefix}/health`           | Liveness probe - HTTP 200 while the process is alive.  No database dependency; safe for fast liveness checks. |
+| `GET`  | `/{prefix}/ready`            | Readiness probe - HTTP 200 when the database is reachable (`SELECT 1`), HTTP 503 otherwise. |
+| `POST` | `/{prefix}/v1/facts`         | Submit system and package facts for the calling host.    |
 
 ## Size limits
 
