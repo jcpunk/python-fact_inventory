@@ -29,5 +29,5 @@ _v1_router: Router = Router(
     route_handlers=[HostFactController_v1],
 )
 
-# All handlers at relative paths - no prefix applied here.
+# All handlers use relative paths, prefix appied in host app
 route_handlers: list[ControllerRouterHandler] = [health_check, ready_check, _v1_router]

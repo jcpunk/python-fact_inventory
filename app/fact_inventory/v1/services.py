@@ -29,7 +29,10 @@ class HostFactsService(SQLAlchemyAsyncRepositoryService[HostFacts]):
         )
 
     async def save_client(self, data: dict[str, Any]) -> None:
-        """Upsert a fact record, matching on *client_address* to detect duplicates."""
+        """
+        Upsert a fact record, matching on *client_address* to detect and
+        replace duplicate hosts.
+        """
         await self.upsert(  # technically this is a bit database specific
             data=data,
             match_fields=["client_address"],  # tells it how to detect duplicates
