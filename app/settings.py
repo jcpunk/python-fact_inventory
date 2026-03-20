@@ -12,6 +12,7 @@ Consumers should import and use that object directly::
 
 Configurable elements (production):
   - DATABASE_URI: str          (required)
+  - APP_NAME: str              (default "fact_inventory")
   - RATE_LIMIT_MINUTES: int    (default 27)
   - CREATE_ALL: bool           (default True)
   - DB_POOL_SIZE: int          (default 10)
@@ -26,8 +27,6 @@ Additional configurable elements (for development with uvicorn):
   - PORT: int = see main.py
 """
 
-from __future__ import annotations
-
 import contextlib
 import logging
 import os
@@ -36,15 +35,11 @@ import subprocess
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _package_version
 from pathlib import Path
+from typing import Self
 
 from litestar.logging import LoggingConfig
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-# ----------------------------------------------------------------------
-# Application name — identity constant, not configurable at runtime
-# ----------------------------------------------------------------------
-NAME = "fact_inventory"
 
 RUNTIME = os.getenv("RUNTIME", "testing")
 _ENV_FILE = Path(f".env.{RUNTIME}")
@@ -91,6 +86,7 @@ class Settings(BaseSettings):
     )
 
     database_uri: str = Field(...)
+    app_name: str = "fact_inventory"
     rate_limit_minutes: int = 27
     create_all: bool = True
     db_pool_size: int = 10
@@ -101,7 +97,7 @@ class Settings(BaseSettings):
     version: str = Field(default_factory=_get_version)
 
     @model_validator(mode="after")
-    def _apply_debug_log_level(self) -> Settings:
+    def _apply_debug_log_level(self) -> Self:
         """Force log_level to DEBUG whenever debug mode is enabled."""
         if self.debug:
             self.log_level = "DEBUG"

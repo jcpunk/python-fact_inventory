@@ -1,6 +1,4 @@
-"""
-We store our api schemas here
-"""
+"""Pydantic/SQLAlchemy DTO schemas exposed by the fact_inventory API."""
 
 import json
 from typing import Any
@@ -8,6 +6,7 @@ from typing import Any
 from advanced_alchemy.extensions.litestar import SQLAlchemyDTO, SQLAlchemyDTOConfig
 from pydantic import field_validator
 
+from ...constants import MAX_JSON_FIELD_BYTES
 from .models import HostFacts
 
 
@@ -19,7 +18,7 @@ class _FieldSizeError(ValueError):
 
 
 class HostFactsWriteAPI(SQLAlchemyDTO[HostFacts]):
-    """What API endpoints should HostFacts expose for writing"""
+    """DTO that exposes only the writable fields of HostFacts to API consumers."""
 
     config = SQLAlchemyDTOConfig(
         exclude={
@@ -34,11 +33,10 @@ class HostFactsWriteAPI(SQLAlchemyDTO[HostFacts]):
     @field_validator("system_facts", "package_facts")
     @classmethod
     def validate_json_size(cls, v: dict[str, Any]) -> dict[str, Any]:
-        # https://github.com/orgs/litestar-org/discussions/4351
-        json_str = json.dumps(v)
-        max_size_bytes = 1024 * 1024 * 4  # This hard coded value is guess work
+        """Reject any JSON field whose UTF-8 size exceeds MAX_JSON_FIELD_BYTES.
 
-        if len(json_str.encode("utf-8")) > max_size_bytes:
-            raise _FieldSizeError(max_size_bytes)
-
+        See https://github.com/orgs/litestar-org/discussions/4351 for background.
+        """
+        if len(json.dumps(v).encode("utf-8")) > MAX_JSON_FIELD_BYTES:
+            raise _FieldSizeError(MAX_JSON_FIELD_BYTES)
         return v

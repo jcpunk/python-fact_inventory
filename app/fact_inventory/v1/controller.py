@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..constants import MAX_REQUEST_BODY_BYTES
 from ..schemas.hostfacts import HostFacts, HostFactsWriteAPI
 from .services import HostFactsService
 
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class DetailResponse(BaseModel):
-    """A simple model that just has a detail string"""
+    """Response envelope returned on both success and error paths."""
 
     detail: str
 
@@ -41,8 +42,8 @@ class HostFactController(Controller):
     # OpenAPI Grouping of the API endpoints
     tags: list[str] = ["v1"]  # noqa: RUF012 - Litestar reads this as an instance var, ClassVar conflicts with base class
 
-    # This hard coded value is guess work
-    request_max_body_size: int = 1024 * 1024 * 9  # value in bytes
+    # See app/fact_inventory/constants.py for the rationale behind this value.
+    request_max_body_size: int = MAX_REQUEST_BODY_BYTES
 
     @post(
         "",

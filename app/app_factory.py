@@ -22,8 +22,7 @@ from litestar.openapi.config import OpenAPIConfig
 from litestar.plugins.prometheus import PrometheusConfig, PrometheusController
 
 from .fact_inventory.routes import routes
-from .settings import NAME, logger, logging_config, settings
-from .validate_ip import validate_ip_middleware
+from .settings import logger, logging_config, settings
 
 
 def _get_rate_limit_minutes() -> int:
@@ -86,7 +85,7 @@ def create_app() -> Litestar:
     # Observability
     # ------------------------------------------------------------------
     otel_config = OpenTelemetryConfig()
-    prometheus_config = PrometheusConfig(app_name=NAME)
+    prometheus_config = PrometheusConfig(app_name=settings.app_name)
 
     # ------------------------------------------------------------------
     # Assemble the Litestar app config
@@ -102,7 +101,6 @@ def create_app() -> Litestar:
         "middleware": [
             otel_config.middleware,
             prometheus_config.middleware,
-            validate_ip_middleware,
         ],
         "on_startup": [_on_startup],
         "on_shutdown": [_on_shutdown],
@@ -115,7 +113,7 @@ def create_app() -> Litestar:
     # ------------------------------------------------------------------
     if settings.debug:
         app_config["openapi_config"] = OpenAPIConfig(
-            title=NAME,
+            title=settings.app_name,
             version=settings.version,
         )
         logger.warning("OpenAPI documentation enabled (debug mode)")
@@ -128,7 +126,7 @@ def create_app() -> Litestar:
     # ------------------------------------------------------------------
     logger.info(
         "%s version %s starting (rate limit %s min)",
-        NAME,
+        settings.app_name,
         settings.version,
         settings.rate_limit_minutes,
     )

@@ -20,6 +20,7 @@ class HostFactsService(SQLAlchemyAsyncRepositoryService[HostFacts]):
     async def rate_limit_exceeded(
         self, client_address: str, rate_limit_minutes: int
     ) -> bool:
+        """Return True if *client_address* submitted within *rate_limit_minutes*."""
         threshold = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(
             minutes=rate_limit_minutes
         )
@@ -28,6 +29,7 @@ class HostFactsService(SQLAlchemyAsyncRepositoryService[HostFacts]):
         )
 
     async def save_client(self, data: dict[str, Any]) -> None:
+        """Upsert a fact record, matching on *client_address* to detect duplicates."""
         await self.upsert(  # technically this is a bit database specific
             data=data,
             match_fields=["client_address"],  # tells it how to detect duplicates

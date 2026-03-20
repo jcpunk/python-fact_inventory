@@ -11,14 +11,9 @@ Usage in the application factory::
     app = Litestar(route_handlers=[*routes, ...])
 """
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+from litestar import Router
 
 from .unversioned_routes import routes as _unversioned
 from .versioned_routes import routes as _versioned
-
-if TYPE_CHECKING:
-    from litestar import Router
 
 routes: list[Router] = [*_unversioned, *_versioned]
