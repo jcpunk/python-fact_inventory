@@ -31,5 +31,8 @@ class HostFactsWriteAPI(SQLAlchemyDTO[HostFacts]):
         See https://github.com/orgs/litestar-org/discussions/4351 for background.
         """
         if len(json.dumps(v).encode("utf-8")) > MAX_JSON_FIELD_BYTES:
-            raise ValueError(f"JSON field exceeds maximum size of {MAX_JSON_FIELD_BYTES} bytes")
+            # We want to suppress the complaint associated with this exception
+            raise ValueError(  # noqa: TRY003
+                f"JSON field exceeds maximum size of {MAX_JSON_FIELD_BYTES} bytes"
+            )
         return v
