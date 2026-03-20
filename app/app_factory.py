@@ -15,13 +15,13 @@ from advanced_alchemy.extensions.litestar import (
 from advanced_alchemy.extensions.litestar.plugins.init.config.engine import (
     EngineConfig,
 )
-from litestar import Litestar
+from litestar import Litestar, Router
 from litestar.contrib.opentelemetry import OpenTelemetryConfig
 from litestar.di import Provide
 from litestar.openapi.config import OpenAPIConfig
 from litestar.plugins.prometheus import PrometheusConfig, PrometheusController
 
-from .fact_inventory.routes import create_routes
+from .fact_inventory.routes import route_handlers as _fact_inventory_handlers
 from .settings import logger, logging_config, settings
 
 
@@ -88,10 +88,20 @@ def create_app() -> Litestar:
     prometheus_config = PrometheusConfig(app_name=settings.app_name)
 
     # ------------------------------------------------------------------
+    # Mount fact_inventory under the configured app_name prefix so that
+    # the sub-application is completely prefix-agnostic and the host app
+    # controls the URL namespace via a standard Litestar Router.
+    # ------------------------------------------------------------------
+    fact_inventory_router = Router(
+        path=f"/{settings.app_name}",
+        route_handlers=_fact_inventory_handlers,
+    )
+
+    # ------------------------------------------------------------------
     # Assemble the Litestar app config
     # ------------------------------------------------------------------
     app_config: dict[str, Any] = {
-        "route_handlers": [*create_routes(prefix=settings.app_name), PrometheusController],
+        "route_handlers": [fact_inventory_router, PrometheusController],
         "dependencies": {
             "rate_limit_minutes": Provide(
                 _get_rate_limit_minutes, sync_to_thread=False
