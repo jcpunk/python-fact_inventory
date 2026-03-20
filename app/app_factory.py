@@ -119,7 +119,7 @@ def create_app() -> Litestar:
     }
 
     # ------------------------------------------------------------------
-    # OpenAPI docs are enabled in debug mode
+    # OpenAPI docs are ONLY enabled in debug mode
     # ------------------------------------------------------------------
     if settings.debug:
         app_config["openapi_config"] = OpenAPIConfig(
