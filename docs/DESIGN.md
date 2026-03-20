@@ -7,7 +7,7 @@ The application follows a layered architecture:
 ### Routing architecture
 
 All `fact_inventory` route handlers are defined at relative paths with no
-prefix baked in.  The host application mounts them under a chosen prefix by
+prefix baked in. The host application mounts them under a chosen prefix by
 wrapping the exported `route_handlers` list in a standard Litestar `Router`:
 
 ```python
@@ -25,10 +25,10 @@ the bundled application factory, producing the paths shown below.
 These operational endpoints are not tied to any API version and have no
 database-layer dependencies beyond the readiness probe:
 
-| Method | Path                    | Description                                          |
-|--------|-------------------------|------------------------------------------------------|
-| `GET`  | `/{prefix}/health`      | Liveness probe — HTTP 200 while the process is alive |
-| `GET`  | `/{prefix}/ready`       | Readiness probe — HTTP 200 when the database is reachable (`SELECT 1`), HTTP 503 otherwise |
+| Method | Path               | Description                                                                                |
+| ------ | ------------------ | ------------------------------------------------------------------------------------------ |
+| `GET`  | `/{prefix}/health` | Liveness probe — HTTP 200 while the process is alive                                       |
+| `GET`  | `/{prefix}/ready`  | Readiness probe — HTTP 200 when the database is reachable (`SELECT 1`), HTTP 503 otherwise |
 
 ### /{prefix}/v1
 
