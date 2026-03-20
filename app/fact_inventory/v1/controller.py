@@ -40,7 +40,9 @@ class HostFactController(Controller):
     path: str = "/facts"
 
     # OpenAPI Grouping of the API endpoints
-    tags: list[str] = ["v1"]  # noqa: RUF012 - Litestar reads this as an instance var, ClassVar conflicts with base class
+    # Litestar reads this as an instance var
+    # thus ClassVar conflicts with base class, disable RUF012
+    tags: list[str] = ["v1"]  # noqa: RUF012
 
     # See app/fact_inventory/constants.py for the rationale behind this value.
     request_max_body_size: int = MAX_REQUEST_BODY_BYTES
