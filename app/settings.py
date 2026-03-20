@@ -28,6 +28,7 @@ Additional configurable elements (for development with uvicorn):
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import shutil
@@ -56,14 +57,12 @@ def _get_version() -> str:
     2. Current git commit short-hash (``git rev-parse --short HEAD``).
     3. The literal string ``"unknown"``.
     """
-    try:
+    with contextlib.suppress(PackageNotFoundError):
         return _package_version("fact-inventory")
-    except PackageNotFoundError:
-        pass
 
     git = shutil.which("git")
     if git is not None:
-        try:
+        with contextlib.suppress(subprocess.CalledProcessError):
             # All arguments are controlled: `git` is a fully-resolved path from
             # shutil.which() and the remaining args are literals, so there is no
             # untrusted input here.  S603 is suppressed accordingly.
@@ -74,8 +73,6 @@ def _get_version() -> str:
                 check=True,
             )
             return f"git-{result.stdout.strip()}"
-        except subprocess.CalledProcessError:
-            pass
 
     return "unknown"
 
