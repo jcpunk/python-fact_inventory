@@ -1,5 +1,5 @@
 """
-Tests for the unversioned /fact_inventory/ready endpoint.
+Tests for the unversioned /ready endpoint.
 """
 
 from unittest.mock import AsyncMock, patch
@@ -13,46 +13,46 @@ from litestar.testing import AsyncTestClient
 
 
 class TestReadinessCheck:
-    """Tests for GET /fact_inventory/ready."""
+    """Tests for GET /ready."""
 
     async def test_ready_returns_ok(self, client: AsyncTestClient) -> None:
         """The readiness endpoint must respond with HTTP 200 when the DB is up."""
-        response = await client.get("/fact_inventory/ready")
+        response = await client.get("/ready")
         assert response.status_code == HTTP_200_OK
 
     async def test_ready_body_status(self, client: AsyncTestClient) -> None:
         """Response body must contain status 'ok'."""
-        response = await client.get("/fact_inventory/ready")
+        response = await client.get("/ready")
         assert response.json()["status"] == "ok"
 
     async def test_ready_body_service(self, client: AsyncTestClient) -> None:
         """Response body must identify the service as 'fact_inventory'."""
-        response = await client.get("/fact_inventory/ready")
+        response = await client.get("/ready")
         assert response.json()["service"] == "fact_inventory"
 
     async def test_ready_content_type(self, client: AsyncTestClient) -> None:
         """Response must be JSON."""
-        response = await client.get("/fact_inventory/ready")
+        response = await client.get("/ready")
         assert "application/json" in response.headers["content-type"]
 
     async def test_ready_no_extra_fields(self, client: AsyncTestClient) -> None:
         """Response body must contain exactly the documented fields."""
-        response = await client.get("/fact_inventory/ready")
+        response = await client.get("/ready")
         assert set(response.json().keys()) == {"status", "service"}
 
     async def test_ready_post_not_allowed(self, client: AsyncTestClient) -> None:
         """Only GET is allowed; POST must be rejected."""
-        response = await client.post("/fact_inventory/ready", json={})
+        response = await client.post("/ready", json={})
         assert response.status_code == HTTP_405_METHOD_NOT_ALLOWED
 
     async def test_ready_put_not_allowed(self, client: AsyncTestClient) -> None:
         """Only GET is allowed; PUT must be rejected."""
-        response = await client.put("/fact_inventory/ready", json={})
+        response = await client.put("/ready", json={})
         assert response.status_code == HTTP_405_METHOD_NOT_ALLOWED
 
     async def test_ready_delete_not_allowed(self, client: AsyncTestClient) -> None:
         """Only GET is allowed; DELETE must be rejected."""
-        response = await client.delete("/fact_inventory/ready")
+        response = await client.delete("/ready")
         assert response.status_code == HTTP_405_METHOD_NOT_ALLOWED
 
     async def test_ready_db_failure_returns_503(
@@ -65,7 +65,7 @@ class TestReadinessCheck:
             new_callable=AsyncMock,
             side_effect=Exception("db unavailable"),
         ):
-            response = await client.get("/fact_inventory/ready")
+            response = await client.get("/ready")
         assert response.status_code == HTTP_503_SERVICE_UNAVAILABLE
 
     async def test_ready_db_failure_body(self, client: AsyncTestClient) -> None:
@@ -75,7 +75,7 @@ class TestReadinessCheck:
             new_callable=AsyncMock,
             side_effect=Exception("db unavailable"),
         ):
-            response = await client.get("/fact_inventory/ready")
+            response = await client.get("/ready")
         assert "detail" in response.json()
 
     async def test_ready_db_failure_detail_is_safe(
@@ -87,7 +87,7 @@ class TestReadinessCheck:
             new_callable=AsyncMock,
             side_effect=Exception("db unavailable"),
         ):
-            response = await client.get("/fact_inventory/ready")
+            response = await client.get("/ready")
         detail = response.json()["detail"].lower()
         assert "database" not in detail
         assert "sql" not in detail
@@ -95,7 +95,7 @@ class TestReadinessCheck:
 
     async def test_ready_patch_not_allowed(self, client: AsyncTestClient) -> None:
         """Only GET is allowed; PATCH must be rejected."""
-        response = await client.patch("/fact_inventory/ready")
+        response = await client.patch("/ready")
         assert response.status_code == HTTP_405_METHOD_NOT_ALLOWED
 
     async def test_ready_503_content_type_is_json(
@@ -107,7 +107,7 @@ class TestReadinessCheck:
             new_callable=AsyncMock,
             side_effect=Exception("db unavailable"),
         ):
-            response = await client.get("/fact_inventory/ready")
+            response = await client.get("/ready")
         assert "application/json" in response.headers["content-type"]
 
     async def test_ready_503_has_only_detail_key(self, client: AsyncTestClient) -> None:
@@ -117,7 +117,7 @@ class TestReadinessCheck:
             new_callable=AsyncMock,
             side_effect=Exception("db unavailable"),
         ):
-            response = await client.get("/fact_inventory/ready")
+            response = await client.get("/ready")
         assert set(response.json().keys()) == {"detail", "status_code"}
 
     async def test_ready_original_exception_not_leaked(
@@ -130,7 +130,7 @@ class TestReadinessCheck:
             new_callable=AsyncMock,
             side_effect=Exception(some_message),
         ):
-            response = await client.get("/fact_inventory/ready")
+            response = await client.get("/ready")
         assert some_message not in response.text
 
     async def test_ready_repeated_calls_consistent(
@@ -139,7 +139,7 @@ class TestReadinessCheck:
     ) -> None:
         """Multiple successive calls must all return the same response."""
         for _ in range(3):
-            response = await client.get("/fact_inventory/ready")
+            response = await client.get("/ready")
             assert response.status_code == HTTP_200_OK
             assert response.json() == {"status": "ok", "service": "fact_inventory"}
 
@@ -148,8 +148,8 @@ class TestReadinessCheck:
         client: AsyncTestClient,
     ) -> None:
         """The readiness probe lives at a different path than the liveness probe."""
-        health = await client.get("/fact_inventory/health")
-        ready = await client.get("/fact_inventory/ready")
+        health = await client.get("/health")
+        ready = await client.get("/ready")
         assert health.status_code == HTTP_200_OK
         assert ready.status_code == HTTP_200_OK
 
@@ -163,13 +163,13 @@ class TestReadinessCheck:
             new_callable=AsyncMock,
             side_effect=Exception("db unavailable"),
         ):
-            ready = await client.get("/fact_inventory/ready")
-            health = await client.get("/fact_inventory/health")
+            ready = await client.get("/ready")
+            health = await client.get("/health")
         assert ready.status_code == HTTP_503_SERVICE_UNAVAILABLE
         assert health.status_code == HTTP_200_OK
 
     async def test_ready_not_rate_limited(self, client: AsyncTestClient) -> None:
         """Readiness probe must never be throttled by the rate limiter."""
         for _ in range(5):
-            response = await client.get("/fact_inventory/ready")
+            response = await client.get("/ready")
             assert response.status_code == HTTP_200_OK

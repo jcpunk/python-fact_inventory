@@ -4,7 +4,7 @@ Tests for the FactController HTTP endpoints.
 
 from unittest.mock import AsyncMock, patch
 
-from app.fact_inventory.v1.services import HostFactsService
+from app.v1.services import HostFactsService
 from litestar.status_codes import (
     HTTP_201_CREATED,
     HTTP_400_BAD_REQUEST,
@@ -19,7 +19,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 class TestFactControllerSubmit:
-    """Tests for the POST /fact_inventory/v1/facts endpoint."""
+    """Tests for the POST /v1/facts endpoint."""
 
     async def test_submit_valid_params(
         self,
@@ -27,7 +27,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Test submitting valid fact data returns 200."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={  # these are just example nonsense values
                 "system_facts": {
                     "os": "RHEL",
@@ -53,7 +53,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Test submitting minimal valid data."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={
                 "system_facts": {},
                 "package_facts": {},
@@ -70,7 +70,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Test submitting empty but valid JSON objects."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={"system_facts": {}, "package_facts": {}},
         )
 
@@ -97,7 +97,7 @@ class TestFactControllerSubmit:
             "package_facts": {},
         }
 
-        response = await client.post("/fact_inventory/v1/facts", json=nested_facts)
+        response = await client.post("/v1/facts", json=nested_facts)
 
         assert response.status_code == HTTP_201_CREATED
         assert "Facts stored successfully" in response.text
@@ -116,7 +116,7 @@ class TestFactControllerSubmit:
             "package_facts": {},
         }
 
-        response = await client.post("/fact_inventory/v1/facts", json=unicode_facts)
+        response = await client.post("/v1/facts", json=unicode_facts)
 
         assert response.status_code == HTTP_201_CREATED
         assert "Facts stored successfully" in response.text
@@ -134,7 +134,7 @@ class TestFactControllerSubmit:
             "package_facts": {},
         }
 
-        response = await client.post("/fact_inventory/v1/facts", json=special_facts)
+        response = await client.post("/v1/facts", json=special_facts)
 
         assert response.status_code == HTTP_201_CREATED
         assert "Facts stored successfully" in response.text
@@ -146,7 +146,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Test that missing system_facts field is rejected."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={"package_facts": {}},
         )
 
@@ -158,7 +158,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Test that missing package_facts field is rejected."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={"system_facts": {}},
         )
 
@@ -174,7 +174,7 @@ class TestFactControllerSubmit:
             "system_facts": {},
             "unknown_field": "should_fail",
         }
-        response = await client.post("/fact_inventory/v1/facts", json=invalid_data)
+        response = await client.post("/v1/facts", json=invalid_data)
 
         assert response.status_code == HTTP_400_BAD_REQUEST
 
@@ -184,7 +184,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Test that malformed JSON is rejected."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             content="not valid json",
             headers={"Content-Type": "application/json"},
         )
@@ -197,7 +197,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Test that non-dict system_facts are rejected."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={
                 "system_facts": "not a dict",
                 "package_facts": {},
@@ -212,7 +212,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Test that non-dict package_facts are rejected."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={
                 "system_facts": {},
                 "package_facts": ["not", "a", "dict"],
@@ -235,7 +235,7 @@ class TestFactControllerSubmit:
             "package_facts": {},
         }
 
-        response = await client.post("/fact_inventory/v1/facts", json=oversized_data)
+        response = await client.post("/v1/facts", json=oversized_data)
 
         assert response.status_code == HTTP_413_REQUEST_ENTITY_TOO_LARGE
 
@@ -252,7 +252,7 @@ class TestFactControllerSubmit:
         """
         # First submission should succeed
         response1 = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={
                 "system_facts": {},
                 "package_facts": {},
@@ -262,7 +262,7 @@ class TestFactControllerSubmit:
 
         # Second immediate submission should be rate limited
         response2 = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={
                 "system_facts": {},
                 "package_facts": {},
@@ -279,22 +279,22 @@ class TestFactControllerSubmit:
 
     async def test_submit_get_not_allowed(self, client: AsyncTestClient) -> None:
         """GET is not allowed on the facts endpoint."""
-        response = await client.get("/fact_inventory/v1/facts")
+        response = await client.get("/v1/facts")
         assert response.status_code == HTTP_405_METHOD_NOT_ALLOWED
 
     async def test_submit_put_not_allowed(self, client: AsyncTestClient) -> None:
         """PUT is not allowed on the facts endpoint."""
-        response = await client.put("/fact_inventory/v1/facts", json={})
+        response = await client.put("/v1/facts", json={})
         assert response.status_code == HTTP_405_METHOD_NOT_ALLOWED
 
     async def test_submit_delete_not_allowed(self, client: AsyncTestClient) -> None:
         """DELETE is not allowed on the facts endpoint."""
-        response = await client.delete("/fact_inventory/v1/facts")
+        response = await client.delete("/v1/facts")
         assert response.status_code == HTTP_405_METHOD_NOT_ALLOWED
 
     async def test_submit_patch_not_allowed(self, client: AsyncTestClient) -> None:
         """PATCH is not allowed on the facts endpoint."""
-        response = await client.patch("/fact_inventory/v1/facts", json={})
+        response = await client.patch("/v1/facts", json={})
         assert response.status_code == HTTP_405_METHOD_NOT_ALLOWED
 
     # ------------------------------------------------------------------
@@ -304,7 +304,7 @@ class TestFactControllerSubmit:
     async def test_submit_response_is_json(self, client: AsyncTestClient) -> None:
         """Successful submission must return application/json."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={"system_facts": {}, "package_facts": {}},
         )
         assert response.status_code == HTTP_201_CREATED
@@ -315,7 +315,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """201 response body must contain a 'detail' key."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={"system_facts": {}, "package_facts": {}},
         )
         assert response.status_code == HTTP_201_CREATED
@@ -326,7 +326,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """201 response body must contain exactly one key."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={"system_facts": {}, "package_facts": {}},
         )
         assert response.status_code == HTTP_201_CREATED
@@ -347,7 +347,7 @@ class TestFactControllerSubmit:
             side_effect=SQLAlchemyError("simulated write failure"),
         ):
             response = await client.post(
-                "/fact_inventory/v1/facts",
+                "/v1/facts",
                 json={"system_facts": {}, "package_facts": {}},
             )
         assert response.status_code == HTTP_409_CONFLICT
@@ -363,7 +363,7 @@ class TestFactControllerSubmit:
             side_effect=SQLAlchemyError("simulated write failure"),
         ):
             response = await client.post(
-                "/fact_inventory/v1/facts",
+                "/v1/facts",
                 json={"system_facts": {}, "package_facts": {}},
             )
         assert "application/json" in response.headers["content-type"]
@@ -379,7 +379,7 @@ class TestFactControllerSubmit:
             side_effect=SQLAlchemyError("simulated write failure"),
         ):
             response = await client.post(
-                "/fact_inventory/v1/facts",
+                "/v1/facts",
                 json={"system_facts": {}, "package_facts": {}},
             )
         assert "detail" in response.json()
@@ -395,7 +395,7 @@ class TestFactControllerSubmit:
             side_effect=SQLAlchemyError("simulated write failure"),
         ):
             response = await client.post(
-                "/fact_inventory/v1/facts",
+                "/v1/facts",
                 json={"system_facts": {}, "package_facts": {}},
             )
         detail = response.json()["detail"].lower()
@@ -418,7 +418,7 @@ class TestFactControllerSubmit:
             side_effect=RuntimeError("something went very wrong"),
         ):
             response = await client.post(
-                "/fact_inventory/v1/facts",
+                "/v1/facts",
                 json={"system_facts": {}, "package_facts": {}},
             )
         assert response.status_code == HTTP_500_INTERNAL_SERVER_ERROR
@@ -432,7 +432,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """null values inside system_facts must be accepted."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={"system_facts": {"key": None}, "package_facts": {}},
         )
         assert response.status_code == HTTP_201_CREATED
@@ -442,7 +442,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Boolean values inside facts dicts must be accepted."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={
                 "system_facts": {"enabled": True, "disabled": False},
                 "package_facts": {},
@@ -455,7 +455,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Numeric values inside facts dicts must be accepted."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={
                 "system_facts": {"count": 42, "ratio": 3.14},
                 "package_facts": {},
@@ -466,7 +466,7 @@ class TestFactControllerSubmit:
     async def test_submit_list_values_in_facts(self, client: AsyncTestClient) -> None:
         """List values inside facts dicts must be accepted."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={
                 "system_facts": {"tags": ["a", "b", "c"]},
                 "package_facts": {"versions": [1, 2, 3]},
@@ -479,7 +479,7 @@ class TestFactControllerSubmit:
     ) -> None:
         """Empty string values inside facts dicts must be accepted."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={"system_facts": {"key": ""}, "package_facts": {}},
         )
         assert response.status_code == HTTP_201_CREATED
@@ -491,7 +491,7 @@ class TestFactControllerSubmit:
     async def test_submit_empty_body(self, client: AsyncTestClient) -> None:
         """An empty request body must be rejected."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             content=b"",
             headers={"Content-Type": "application/json"},
         )
@@ -500,7 +500,7 @@ class TestFactControllerSubmit:
     async def test_submit_null_json_body(self, client: AsyncTestClient) -> None:
         """A JSON null body must be rejected."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             content=b"null",
             headers={"Content-Type": "application/json"},
         )

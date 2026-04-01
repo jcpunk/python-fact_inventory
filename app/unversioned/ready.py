@@ -1,4 +1,4 @@
-"""Database readiness probe for the fact_inventory sub-application.
+"""Database readiness probe.
 
 This handler verifies that the database connection is healthy.  It is not
 tied to any API version and is intended for use as a Kubernetes-style

@@ -3,8 +3,8 @@ Tests for the host retention / purge logic in the service and repository layers.
 """
 
 from advanced_alchemy.extensions.litestar import SQLAlchemyPlugin
-from app.fact_inventory.schemas.hostfacts import HostFacts
-from app.fact_inventory.v1.services import HostFactsService
+from app.schemas import HostFacts
+from app.v1.services import HostFactsService
 from litestar.status_codes import HTTP_201_CREATED
 from litestar.testing import AsyncTestClient
 from sqlalchemy import select
@@ -25,7 +25,7 @@ class TestPurgeExpiredHosts:
     async def test_purge_removes_old_hosts(self, client: AsyncTestClient) -> None:
         """Hosts older than the retention window must be deleted."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={"system_facts": {"os": "test"}, "package_facts": {}},
         )
         assert response.status_code == HTTP_201_CREATED
@@ -45,7 +45,7 @@ class TestPurgeExpiredHosts:
     async def test_purge_keeps_recent_hosts(self, client: AsyncTestClient) -> None:
         """Hosts updated within the retention window must be kept."""
         response = await client.post(
-            "/fact_inventory/v1/facts",
+            "/v1/facts",
             json={"system_facts": {"os": "keep-me"}, "package_facts": {}},
         )
         assert response.status_code == HTTP_201_CREATED

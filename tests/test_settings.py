@@ -4,6 +4,8 @@ import pytest
 from app.settings import Settings
 from pydantic import ValidationError
 
+_DEFAULT_JITTER_MINUTES = 20
+
 
 class TestSettingsValidation:
     """Tests for Settings field constraints."""
@@ -58,3 +60,18 @@ class TestSettingsValidation:
         """rate_limit_unit must be one of second/minute/hour/day."""
         with pytest.raises(ValidationError, match="rate_limit_unit"):
             Settings(database_uri="sqlite:///:memory:", rate_limit_unit="week")  # type: ignore[arg-type]
+
+    def test_cleanup_jitter_minutes_accepts_zero(self) -> None:
+        """cleanup_jitter_minutes=0 must disable jitter."""
+        s = Settings(database_uri="sqlite:///:memory:", cleanup_jitter_minutes=0)
+        assert s.cleanup_jitter_minutes == 0
+
+    def test_cleanup_jitter_minutes_rejects_negative(self) -> None:
+        """cleanup_jitter_minutes must be >= 0."""
+        with pytest.raises(ValidationError, match="cleanup_jitter_minutes"):
+            Settings(database_uri="sqlite:///:memory:", cleanup_jitter_minutes=-1)
+
+    def test_cleanup_jitter_minutes_default(self) -> None:
+        """Default cleanup_jitter_minutes must be 20."""
+        s = Settings(database_uri="sqlite:///:memory:")
+        assert s.cleanup_jitter_minutes == _DEFAULT_JITTER_MINUTES

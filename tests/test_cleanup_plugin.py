@@ -7,11 +7,13 @@ import contextlib
 from unittest.mock import MagicMock
 
 import pytest
-from app.fact_inventory.plugins.cleanup import DailyCleanupPlugin
+from app.cleanup import DailyCleanupPlugin
 from litestar.config.app import AppConfig
 
 _ONE_DAY_SECONDS = 86_400
 _ONE_HOUR_SECONDS = 3600
+_DEFAULT_JITTER_SECONDS = 1200
+_CUSTOM_JITTER_SECONDS = 600
 _MIN_INTERVAL_SECONDS = 60
 _MIN_EXPECTED_CALLS = 2
 
@@ -84,6 +86,41 @@ class TestDailyCleanupPluginInit:
         )
         assert plugin._interval == _MIN_INTERVAL_SECONDS
 
+    def test_default_jitter(self) -> None:
+        """Default jitter must be 1200 seconds (20 minutes)."""
+
+        async def _noop() -> None: ...
+
+        plugin = DailyCleanupPlugin(cleanup_fn=_noop)
+        assert plugin._jitter == _DEFAULT_JITTER_SECONDS
+
+    def test_custom_jitter(self) -> None:
+        """A custom jitter value must be honoured."""
+
+        async def _noop() -> None: ...
+
+        plugin = DailyCleanupPlugin(
+            cleanup_fn=_noop,
+            jitter_seconds=_CUSTOM_JITTER_SECONDS,
+        )
+        assert plugin._jitter == _CUSTOM_JITTER_SECONDS
+
+    def test_zero_jitter_accepted(self) -> None:
+        """jitter_seconds=0 must disable jitter."""
+
+        async def _noop() -> None: ...
+
+        plugin = DailyCleanupPlugin(cleanup_fn=_noop, jitter_seconds=0)
+        assert plugin._jitter == 0
+
+    def test_negative_jitter_rejected(self) -> None:
+        """Negative jitter_seconds must raise ValueError."""
+
+        async def _noop() -> None: ...
+
+        with pytest.raises(ValueError, match="jitter_seconds must be"):
+            DailyCleanupPlugin(cleanup_fn=_noop, jitter_seconds=-1)
+
 
 class TestDailyCleanupPluginOnAppInit:
     """Tests for the on_app_init hook."""
@@ -150,8 +187,9 @@ class TestDailyCleanupPluginLifecycle:
             interval_seconds=_MIN_INTERVAL_SECONDS,
             name="test-call",
         )
-        # Override interval for fast test execution
+        # Override interval and jitter for fast test execution
         plugin._interval = 0
+        plugin._jitter = 0
         mock_app = MagicMock()
 
         async with plugin._lifespan(mock_app):
@@ -176,8 +214,9 @@ class TestDailyCleanupPluginLifecycle:
             interval_seconds=_MIN_INTERVAL_SECONDS,
             name="test-survive",
         )
-        # Override interval for fast test execution
+        # Override interval and jitter for fast test execution
         plugin._interval = 0
+        plugin._jitter = 0
         mock_app = MagicMock()
 
         async with plugin._lifespan(mock_app):

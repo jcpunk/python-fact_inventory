@@ -1,43 +1,41 @@
 # Design
 
-The application follows a layered architecture:
+The application follows a layered architecture within a single `app` package.
+There is no separate sub-application; `app` **is** fact_inventory.
 
 ## API
 
 ### Routing architecture
 
-All `fact_inventory` route handlers are defined at relative paths with no
-prefix baked in. The host application mounts them under a chosen prefix by
-wrapping the exported `route_handlers` list in a standard Litestar `Router`:
+All route handlers are defined at relative paths. The standalone application
+factory (`create_app`) serves them directly at the root (`/`). When embedding
+in a larger Litestar application, pass a prefix to `create_router`::
 
 ```python
-from litestar import Router
-from app.fact_inventory.routes import route_handlers
+from app.routes import create_router
 
-Router(path="/fact_inventory", route_handlers=route_handlers)
+router = create_router(path="/fact_inventory")
 ```
-
-The `FACT_INVENTORY_PREFIX` setting (default `fact_inventory`) controls the
-prefix used by the bundled application factory, producing the paths shown below.
 
 ### Unversioned routes
 
 These operational endpoints are not tied to any API version and have no
 database-layer dependencies beyond the readiness probe:
 
-| Method | Path               | Description                                                                                |
-| ------ | ------------------ | ------------------------------------------------------------------------------------------ |
-| `GET`  | `/{prefix}/health` | Liveness probe -- HTTP 200 while the process is alive                                       |
-| `GET`  | `/{prefix}/ready`  | Readiness probe -- HTTP 200 when the database is reachable (`SELECT 1`), HTTP 503 otherwise |
+| Method | Path      | Description                                                                                |
+| ------ | --------- | ------------------------------------------------------------------------------------------ |
+| `GET`  | `/health` | Liveness probe -- HTTP 200 while the process is alive                                      |
+| `GET`  | `/ready`  | Readiness probe -- HTTP 200 when the database is reachable (`SELECT 1`), HTTP 503 otherwise |
 
-### /{prefix}/v1
+### /v1
 
-- **Controller Layer** (`v1/controller.py`): HTTP endpoint handlers with request validation. Rate limiting is handled externally by Litestar's `RateLimitMiddleware`; the controller is responsible only for validation and persistence.
+- **Controller Layer** (`v1/controller.py`): HTTP endpoint handlers with request validation. Rate limiting is handled by Litestar's `RateLimitMiddleware`; the controller is responsible only for validation and persistence.
 - **Service Layer** (`v1/services.py`): Business logic without database specific behavior
+- **Response Models** (`v1/responses.py`): Pydantic response envelopes for the v1 API
 
-#### /{prefix}/v1/facts
+#### /v1/facts
 
-**Endpoint**: `POST /{prefix}/v1/facts`
+**Endpoint**: `POST /v1/facts`
 
 **Content-Type**: `application/json`
 
@@ -62,13 +60,13 @@ database-layer dependencies beyond the readiness probe:
 **Rate Limiting**:
 
 Rate limiting is handled by Litestar's built-in `RateLimitMiddleware`,
-configured on the `fact_inventory` router. Health and readiness probes are
-excluded from rate limiting via path patterns. The middleware uses an in-memory
+configured in `routes.py`. Health and readiness probes are excluded
+from rate limiting via path patterns. The middleware uses an in-memory
 store; rate-limit state resets on server restart.
 
 ```
 HTTP/1.1 429 Too Many Requests
-RateLimit-Limit: 1
+RateLimit-Limit: 2
 RateLimit-Remaining: 0
 RateLimit-Reset: <seconds>
 ```
@@ -78,7 +76,7 @@ Standard `RateLimit-*` response headers are included on every response.
 ##### Example with curl
 
 ```bash
-curl -X POST http://localhost:8000/fact_inventory/v1/facts \
+curl -X POST http://localhost:8000/v1/facts \
   -H "Content-Type: application/json" \
   -d '{
     "system_facts": {},
@@ -88,15 +86,13 @@ curl -X POST http://localhost:8000/fact_inventory/v1/facts \
 
 ## Database
 
-For the database layer, objects are kept under **schemas**
-
 ### HostFacts:
 
 Clients are organized by the IP address they use to connect to the endpoint and not by any data they provide.
 
-- **Repository Layer** (`repositories.py`): Database specific behavior patterns
-- **Model Layer** (`models.py`): Data models
-- **API Layer** (`apis.py`): Translation layer from the API to the database objects
+- **Repository Layer** (`schemas/repositories.py`): Database specific behavior patterns
+- **Model Layer** (`schemas/models.py`): Data models
+- **API Layer** (`schemas/apis.py`): Translation layer from the API to the database objects
 
 #### `host_facts` Table
 
@@ -122,19 +118,18 @@ Clients are organized by the IP address they use to connect to the endpoint and 
 
 ### DailyCleanupPlugin
 
-The `DailyCleanupPlugin` implements Litestar's `InitPluginProtocol` to manage
-a periodic background task that enforces data retention. It uses `lifespan`
-context managers so startup and shutdown are handled in a single,
-self-contained block.
+The `DailyCleanupPlugin` (`app/cleanup.py`) implements Litestar's
+`InitPluginProtocol` to manage a periodic background task that enforces
+data retention. It uses `lifespan` context managers so startup and shutdown
+are handled in a single, self-contained block.
 
 - Runs `purge_expired_hosts()` to delete records with an `updated_at` older
   than `RETENTION_DAYS` (default 365).
 - The cleanup interval is controlled by `CLEANUP_INTERVAL_HOURS` (default 24).
+- A configurable jitter (`CLEANUP_JITTER_MINUTES`, default 20) is added to each
+  sleep cycle so that cleanup runs do not fire at the exact same wall-clock
+  time every day.
 - The first cleanup run is deferred until after the first sleep interval,
   so the plugin never blocks application startup.
 - Exceptions inside the cleanup function are logged but do not crash the loop;
   the plugin retries on the next interval.
-
-The plugin is self-contained within the `fact_inventory` sub-application
-(`app/fact_inventory/plugins/cleanup.py`) and is wired into the host
-application by the application factory.

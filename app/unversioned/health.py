@@ -1,4 +1,4 @@
-"""Application liveness probe for the fact_inventory sub-application.
+"""Application liveness probe.
 
 This handler is not tied to any API version and has no external
 dependencies, making it a fast and reliable liveness check.

@@ -4,14 +4,14 @@ Application factory -- creates and configures the Litestar ASGI application.
 The factory wires together:
 * Database (SQLAlchemy async via ``advanced_alchemy``)
 * Observability (OpenTelemetry + Prometheus)
-* Rate limiting (Litestar ``RateLimitMiddleware``)
+* Rate limiting (baked into the router via ``create_router``)
 * Background retention cleanup (``DailyCleanupPlugin``)
-* The ``fact_inventory`` sub-application
+* All route handlers
 
 All tunables are read from the ``settings`` singleton (see ``settings.py``).
 """
 
-from collections.abc import Callable, Coroutine
+import logging
 from typing import Any
 from urllib.parse import urlparse
 
@@ -23,34 +23,17 @@ from advanced_alchemy.extensions.litestar import (
 from advanced_alchemy.extensions.litestar.plugins.init.config.engine import (
     EngineConfig,
 )
-from litestar import Litestar, Router
+from litestar import Litestar
 from litestar.contrib.opentelemetry import OpenTelemetryConfig
-from litestar.middleware.rate_limit import RateLimitConfig
 from litestar.openapi.config import OpenAPIConfig
 from litestar.plugins.prometheus import PrometheusConfig, PrometheusController
 
-from .fact_inventory.plugins import DailyCleanupPlugin
-from .fact_inventory.routes import route_handlers as _fact_inventory_handlers
-from .fact_inventory.v1.services import HostFactsService
-from .settings import logger, logging_config, settings
+from .cleanup import DailyCleanupPlugin
+from .routes import create_router
+from .settings import logging_config, settings
+from .v1.services import HostFactsService
 
-
-def _build_purge_fn(
-    alchemy_config: SQLAlchemyAsyncConfig,
-) -> Callable[[], Coroutine[Any, Any, None]]:
-    """Build an async cleanup function that purges expired host records.
-
-    The returned coroutine creates its own short-lived database session so
-    that the background task is fully independent of any request-scoped
-    session.
-    """
-
-    async def _purge_expired_hosts() -> None:
-        async with alchemy_config.get_session() as session:
-            service = HostFactsService(session)
-            await service.purge_expired_hosts(settings.retention_days)
-
-    return _purge_expired_hosts
+logger = logging.getLogger(__name__)
 
 
 def create_app() -> Litestar:
@@ -96,34 +79,22 @@ def create_app() -> Litestar:
     prometheus_config = PrometheusConfig(app_name=settings.app_name)
 
     # ------------------------------------------------------------------
-    # Rate limiting -- uses Litestar's built-in RateLimitMiddleware.
-    #
-    # Applied to the fact_inventory router so that health/ready probes
-    # and /metrics are never throttled.  The middleware uses an in-memory
-    # store; rate-limit state resets on server restart.
+    # Background retention cleanup
     # ------------------------------------------------------------------
-    rate_limit_config = RateLimitConfig(
-        rate_limit=(settings.rate_limit_unit, settings.rate_limit_max_requests),
-        exclude=["/health$", "/ready$"],
-    )
+    async def _purge_expired_hosts() -> None:
+        """Purge host records older than the configured retention window.
 
-    # ------------------------------------------------------------------
-    # Mount fact_inventory under the configured prefix so that the
-    # sub-application is completely prefix-agnostic and the host app
-    # controls the URL namespace via a standard Litestar Router.
-    # ------------------------------------------------------------------
-    fact_inventory_router = Router(
-        path=f"/{settings.fact_inventory_prefix}",
-        route_handlers=_fact_inventory_handlers,
-        middleware=[rate_limit_config.middleware],
-    )
+        Creates its own short-lived database session so the background
+        task is fully independent of any request-scoped session.
+        """
+        async with alchemy_config.get_session() as session:
+            service = HostFactsService(session)
+            await service.purge_expired_hosts(settings.retention_days)
 
-    # ------------------------------------------------------------------
-    # Plugins -- each owns its lifecycle via InitPluginProtocol
-    # ------------------------------------------------------------------
     cleanup_plugin = DailyCleanupPlugin(
-        cleanup_fn=_build_purge_fn(alchemy_config),
+        cleanup_fn=_purge_expired_hosts,
         interval_seconds=settings.cleanup_interval_hours * 3600,
+        jitter_seconds=settings.cleanup_jitter_minutes * 60,
         name="host-retention-cleanup",
     )
 
@@ -131,7 +102,7 @@ def create_app() -> Litestar:
     # Assemble the Litestar app
     # ------------------------------------------------------------------
     app_kwargs: dict[str, Any] = {
-        "route_handlers": [fact_inventory_router, PrometheusController],
+        "route_handlers": [create_router(), PrometheusController],
         "plugins": [SQLAlchemyPlugin(config=alchemy_config), cleanup_plugin],
         "middleware": [
             otel_config.middleware,
@@ -159,14 +130,14 @@ def create_app() -> Litestar:
     # ------------------------------------------------------------------
     logger.info(
         "%s version %s starting"
-        " (rate limit %s %s/%s, retention %s days,"
-        " cleanup every %s h)",
+        " (rate limit %s req/%s, retention %s days,"
+        " cleanup every %s h, jitter up to %s min)",
         settings.app_name,
         settings.version,
         settings.rate_limit_max_requests,
-        "req",
         settings.rate_limit_unit,
         settings.retention_days,
         settings.cleanup_interval_hours,
+        settings.cleanup_jitter_minutes,
     )
     return Litestar(**app_kwargs)

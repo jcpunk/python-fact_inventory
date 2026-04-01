@@ -1,5 +1,5 @@
 """
-Size limits used across the fact_inventory sub-application.
+Size limits used across the fact_inventory application.
 
 All values are in bytes.  They are centralised here so that related
 limits (per-field validator, controller body cap) stay in sync and
