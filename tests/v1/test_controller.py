@@ -246,9 +246,11 @@ class TestFactControllerSubmit:
         """Test that rate limiting works for repeated submissions.
 
         Rate limiting is handled by Litestar's ``RateLimitMiddleware``
-        (configured in the application factory).  The test environment
-        uses ``RATE_LIMIT_UNIT=second`` / ``RATE_LIMIT_MAX_REQUESTS=1``
-        so the second request within the same second is rejected.
+        (configured in the router factory).  The test environment uses
+        ``RATE_LIMIT_UNIT=second`` and ``RATE_LIMIT_MAX_REQUESTS=1``
+        (see ``.env.testing``), allowing one request per second.  The
+        first request consumes the allowance, so an immediate second
+        request within the same second window is rejected with 429.
         """
         # First submission should succeed
         response1 = await client.post(

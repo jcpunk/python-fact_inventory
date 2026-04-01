@@ -1,5 +1,13 @@
 ---
 # ansible-playbook gather_facts.yml
+#
+# This playbook collects system and package facts from the target host
+# and submits them to the fact_inventory API.
+#
+# The URL below assumes the service is deployed behind a reverse proxy
+# that maps /fact_inventory to the ASGI app.  Adjust the host, port,
+# and path prefix to match your environment.
+# See docs/DEPLOYMENT.md for nginx and Apache configuration examples.
 - name: Gather facts on system
   hosts: localhost
   gather_facts: no # gather with custom logic
