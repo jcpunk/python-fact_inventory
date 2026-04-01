@@ -2,19 +2,12 @@
 Pytest configuration and fixtures for the fact_inventory test suite.
 """
 
-import asyncio
 from collections.abc import AsyncGenerator
 
 import pytest
 from app.app_factory import create_app
 from litestar import Litestar
 from litestar.testing import AsyncTestClient
-
-
-@pytest.fixture(scope="session")
-def event_loop_policy():
-    """Set the event loop policy for the session."""
-    return asyncio.get_event_loop_policy()
 
 
 @pytest.fixture

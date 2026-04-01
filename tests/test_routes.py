@@ -71,9 +71,29 @@ class TestCreateRouterPrefixedPath:
             )
             assert response.status_code == HTTP_201_CREATED
 
-    async def test_root_health_not_found_when_prefixed(self) -> None:
-        """Health must not be at /health when prefix is /fact_inventory."""
-        app = _build_prefixed_app()
-        async with AsyncTestClient(app=app) as client:
-            response = await client.get("/health")
-            assert response.status_code == HTTP_404_NOT_FOUND
+
+class TestV1Prefix:
+    """Tests that API routes are mounted under the /v1 prefix."""
+
+    async def test_facts_accessible_under_v1(self, client: AsyncTestClient) -> None:
+        """/v1/facts must respond -- the v1 segment is required."""
+        response = await client.post(
+            "/v1/facts",
+            json={"system_facts": {}, "package_facts": {}},
+        )
+        assert response.status_code == HTTP_201_CREATED
+
+    async def test_facts_not_at_root(self, client: AsyncTestClient) -> None:
+        """/facts (without v1) must return 404 -- no bare-path route exists."""
+        response = await client.post(
+            "/facts",
+            json={"system_facts": {}, "package_facts": {}},
+        )
+        assert response.status_code == HTTP_404_NOT_FOUND
+
+    async def test_unversioned_endpoints_not_under_v1(
+        self, client: AsyncTestClient
+    ) -> None:
+        """/v1/health must return 404 -- health/ready live outside the v1 prefix."""
+        response = await client.get("/v1/health")
+        assert response.status_code == HTTP_404_NOT_FOUND
