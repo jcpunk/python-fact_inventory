@@ -36,18 +36,6 @@ warn_unused_ignores = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
-filterwarnings = [
-  # advanced-alchemy 1.9.0 deprecated set_async_context() because listeners are
-  # now explicitly sync or async.  The call lives inside advanced-alchemy's own
-  # event-listener machinery and is not reachable from our code.  Remove this
-  # filter once advanced-alchemy 2.0 (which drops the function) is adopted.
-  "ignore:Call to deprecated function 'set_async_context':DeprecationWarning:advanced_alchemy",
-  # litestar imports pydantic v1 compatibility shims that do not work on
-  # Python 3.14+.  The import is unconditional inside litestar itself and
-  # cannot be suppressed from application code.  Remove this filter once
-  # litestar drops its pydantic-v1 compatibility layer.
-  "ignore:Core Pydantic V1 functionality:UserWarning:litestar",
-]
 
 [tool.ruff]
 fix = true
