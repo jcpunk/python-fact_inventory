@@ -2,7 +2,12 @@
 Tests for the host retention / purge logic in the service and repository layers.
 """
 
-from advanced_alchemy.extensions.litestar import SQLAlchemyPlugin
+from typing import Any
+
+from advanced_alchemy.extensions.litestar import (
+    SQLAlchemyAsyncConfig,
+    SQLAlchemyPlugin,
+)
 from app.schemas import HostFacts
 from app.v1.services import HostFactsService
 from litestar.status_codes import HTTP_201_CREATED
@@ -10,13 +15,20 @@ from litestar.testing import AsyncTestClient
 from sqlalchemy import select
 
 
-def _get_alchemy_config(client: AsyncTestClient):  # type: ignore[no-untyped-def]
-    """Extract the SQLAlchemyAsyncConfig from the Litestar app."""
+def _get_alchemy_config(client: AsyncTestClient) -> SQLAlchemyAsyncConfig:
+    """Extract the SQLAlchemyAsyncConfig from the Litestar app.
+
+    Accesses ``SQLAlchemyPlugin._config`` which is an untyped private
+    attribute (a list of config objects).  We take the first element and
+    assert its type at runtime so that callers get proper type safety.
+    """
     plugin: SQLAlchemyPlugin = next(
         p for p in client.app.plugins if isinstance(p, SQLAlchemyPlugin)
     )
-    # _config is a list of config objects; we use the first (and only) one
-    return plugin._config[0]
+    configs: list[Any] = plugin._config  # private, untyped attribute
+    config = configs[0]
+    assert isinstance(config, SQLAlchemyAsyncConfig)
+    return config
 
 
 class TestPurgeExpiredHosts:

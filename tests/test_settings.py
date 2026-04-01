@@ -1,5 +1,7 @@
 """Tests for application settings validation."""
 
+from typing import Any
+
 import pytest
 from app.settings import Settings
 from pydantic import ValidationError
@@ -48,8 +50,11 @@ class TestSettingsValidation:
     def test_database_uri_required(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """database_uri is required and must not be omitted."""
         monkeypatch.delenv("DATABASE_URI", raising=False)
+        # Pass _env_file via kwargs to bypass the type checker;
+        # pydantic-settings accepts this at runtime.
+        kwargs: dict[str, Any] = {"_env_file": None}
         with pytest.raises(ValidationError, match="database_uri"):
-            Settings(_env_file=None)  # type: ignore[call-arg]
+            Settings(**kwargs)
 
     def test_debug_forces_log_level_debug(self) -> None:
         """When debug=True, log_level must be forced to DEBUG."""
@@ -58,8 +63,11 @@ class TestSettingsValidation:
 
     def test_invalid_rate_limit_unit_rejected(self) -> None:
         """rate_limit_unit must be one of second/minute/hour/day."""
+        # Intentionally invalid value -- use Any to avoid lying to
+        # the type checker about an impossible Literal.
+        invalid_unit: Any = "week"
         with pytest.raises(ValidationError, match="rate_limit_unit"):
-            Settings(database_uri="sqlite:///:memory:", rate_limit_unit="week")  # type: ignore[arg-type]
+            Settings(database_uri="sqlite:///:memory:", rate_limit_unit=invalid_unit)
 
     def test_cleanup_jitter_minutes_accepts_zero(self) -> None:
         """cleanup_jitter_minutes=0 must disable jitter."""

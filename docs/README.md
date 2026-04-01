@@ -1,16 +1,20 @@
-# Host Facts Collection API
+# Fact Inventory
 
-A lightweight API service built with Litestar for collecting and storing system information from remote hosts. Designed to handle large-scale concurrency, it provides HTTP endpoint(s) where hosts can submit their system facts and package inventory.
+A lightweight API service built with Litestar for collecting and storing system
+information from remote hosts. Designed to handle large-scale concurrency, it
+provides HTTP endpoint(s) where hosts can submit their system facts and package
+inventory.
 
-The service includes rate limiting to prevent abuse and can use PostgreSQL with JSON indexing for efficient storage and querying.
+The service includes rate limiting to prevent abuse and can use PostgreSQL with
+JSON indexing for efficient storage and querying.
 
 ## Features
 
-- **Rate Limiting**: Per-IP rate limiting via Litestar's built-in `RateLimitMiddleware` (configurable unit and max requests)
-- **Automatic Data Retention**: Background `DailyCleanupPlugin` purges records older than `RETENTION_DAYS`
+- **Rate Limiting**: Per-IP rate limiting via Litestar's built-in `RateLimitMiddleware` (default: 2 requests/hour, configurable)
+- **Automatic Data Retention**: Background `DailyCleanupPlugin` purges records older than `RETENTION_DAYS` with configurable jitter
 - **PostgreSQL Optimized**: Uses `JSONB` fields with `GIN` indexes for efficient querying
 - **Async Architecture**: Built on SQLAlchemy async and Litestar for high performance
-- **Type Safety**: Full type annotations with Pydantic validation
+- **Type Safety**: Full type annotations with Pydantic validation, mypy strict mode
 - **Flexible Storage**: Stores arbitrary JSON data for system and package facts
 - **OpenAPI Documentation**: Auto-generated API docs in debug mode
 - **IP Validation**: IPv4 and IPv6 address validation
@@ -44,7 +48,9 @@ uv sync
 
 ## Configuration
 
-Configuration is managed through environment variables. These can be loaded from `.env` files via `pydantic-settings`. Set `RUNTIME` to select your environment config:
+Configuration is managed through environment variables. These can be loaded from
+`.env` files via `pydantic-settings`. Set `RUNTIME` to select your environment
+config:
 
 ```bash
 export RUNTIME=production  # loads .env.production
@@ -53,19 +59,21 @@ export RUNTIME=testing     # loads .env.testing (default)
 
 ### Environment Variables
 
-- **DATABASE_URI**: Database connection string (required) - PostgreSQL recommended
-- **APP_NAME**: Application name used in metrics and OpenAPI docs (default: `host_inventory`)
-- **FACT_INVENTORY_PREFIX**: URL prefix for the fact_inventory sub-app (default: `fact_inventory`)
-- **RATE_LIMIT_UNIT**: Time unit for rate limiting -- `second`, `minute`, `hour`, or `day` (default: `hour`)
-- **RATE_LIMIT_MAX_REQUESTS**: Maximum requests allowed per rate limit unit (default: `1`)
-- **RETENTION_DAYS**: Days to retain host records before automatic purge (default: `365`)
-- **CLEANUP_INTERVAL_HOURS**: Hours between background cleanup runs (default: `24`)
-- **CREATE_ALL**: Auto-create tables on startup, bypassing Alembic (default: `true`)
-- **DB_POOL_SIZE**: Database connection pool size (default: `10`, PostgreSQL only)
-- **DB_POOL_MAX_OVERFLOW**: Max connections above pool size (default: `20`, PostgreSQL only)
-- **DB_POOL_TIMEOUT**: Seconds to wait for a connection from the pool (default: `30`, PostgreSQL only)
-- **DEBUG**: Enable debug mode and OpenAPI docs (default: `false`)
-- **LOG_LEVEL**: Logging level - DEBUG, INFO, WARNING, ERROR (default: `INFO`)
+| Variable                    | Required | Default          | Description                                                          |
+| --------------------------- | -------- | ---------------- | -------------------------------------------------------------------- |
+| `DATABASE_URI`              | **yes**  | --               | Database connection string (PostgreSQL recommended)                  |
+| `APP_NAME`                  | no       | `fact_inventory` | Application name used in metrics and OpenAPI docs                    |
+| `RATE_LIMIT_UNIT`           | no       | `hour`           | Time unit for rate limiting (`second`, `minute`, `hour`, or `day`)   |
+| `RATE_LIMIT_MAX_REQUESTS`   | no       | `2`              | Maximum requests allowed per rate limit unit                         |
+| `RETENTION_DAYS`            | no       | `365`            | Days to retain host records before automatic purge                   |
+| `CLEANUP_INTERVAL_HOURS`    | no       | `24`             | Hours between background cleanup runs                                |
+| `CLEANUP_JITTER_MINUTES`    | no       | `20`             | Max random offset per cleanup cycle (prevents thundering-herd)       |
+| `CREATE_ALL`                | no       | `true`           | Auto-create tables on startup, bypassing Alembic                     |
+| `DB_POOL_SIZE`              | no       | `10`             | Database connection pool size (PostgreSQL only)                      |
+| `DB_POOL_MAX_OVERFLOW`      | no       | `20`             | Max connections above pool size (PostgreSQL only)                    |
+| `DB_POOL_TIMEOUT`           | no       | `30`             | Seconds to wait for a connection from the pool (PostgreSQL only)     |
+| `DEBUG`                     | no       | `false`          | Enable debug mode and OpenAPI docs                                   |
+| `LOG_LEVEL`                 | no       | `INFO`           | Logging level (DEBUG, INFO, WARNING, ERROR; forced to DEBUG if DEBUG=true) |
 
 Create a `.env.{RUNTIME}` file with:
 
@@ -75,9 +83,10 @@ DATABASE_URI=postgresql+asyncpg://user:password@localhost/dbname
 
 # Optional (with defaults)
 RATE_LIMIT_UNIT=hour
-RATE_LIMIT_MAX_REQUESTS=1
+RATE_LIMIT_MAX_REQUESTS=2
 RETENTION_DAYS=365
 CLEANUP_INTERVAL_HOURS=24
+CLEANUP_JITTER_MINUTES=20
 CREATE_ALL=true
 DB_POOL_SIZE=10
 DB_POOL_MAX_OVERFLOW=20
@@ -88,7 +97,12 @@ LOG_LEVEL=INFO
 
 ## Running the Application
 
-For production, use a production ASGI server like Uvicorn:
+The standalone application factory serves routes at `/` (no prefix). For
+production, run behind a reverse proxy that maps the `/fact_inventory` prefix to
+the ASGI server. See [docs/DEPLOYMENT.md](DEPLOYMENT.md) for nginx and Apache
+examples.
+
+### Standalone (development)
 
 ```bash
 uvicorn app.app_factory:create_app --factory --host 0.0.0.0 --port 8000
@@ -98,9 +112,11 @@ uvicorn app.app_factory:create_app --factory --host 0.0.0.0 --port 8000
 
 The application includes an automatic background cleanup task
 (`DailyCleanupPlugin`) that periodically purges host records older than
-`RETENTION_DAYS` (default 365). The cleanup runs every `CLEANUP_INTERVAL_HOURS`
-(default 24). The first run is deferred until after the first interval to avoid
-impacting startup.
+`RETENTION_DAYS` (default 365). The cleanup runs every
+`CLEANUP_INTERVAL_HOURS` (default 24) plus up to `CLEANUP_JITTER_MINUTES`
+(default 20) of random offset to prevent thundering-herd effects across
+multiple instances. The first run is deferred until after the first interval to
+avoid impacting startup.
 
 For additional capacity planning, consider:
 
@@ -116,13 +132,16 @@ Logs are sent to `stdout` by default and include:
 - Database errors
 - Validation failures
 
-## Example client usage:
+## Example client usage
 
 See `gather_facts.yml`
 
 ## Querying JSON Data (PostgreSQL)
 
-With `GIN` indexes on `JSONB` fields, you can efficiently query facts and build views. See [docs/VIEWS.md](docs/VIEWS.md) for ready-to-use `CREATE VIEW` examples covering host overview, package inventory, distribution summary, and stale host detection.
+With `GIN` indexes on `JSONB` fields, you can efficiently query facts and build
+views. See [docs/VIEWS.md](VIEWS.md) for ready-to-use `CREATE VIEW` examples
+covering host overview, package inventory, distribution summary, and stale host
+detection.
 
 ## Security Considerations
 
@@ -143,13 +162,13 @@ With `GIN` indexes on `JSONB` fields, you can efficiently query facts and build 
 Ensure PostgreSQL is running and connection string is correct:
 
 ```bash
-psql ${DATABASE_URI}
+psql "${DATABASE_URI}"
 ```
 
 ### Large Payloads
 
 If submissions fail due to size:
 
-- Check JSON field sizes
-- Check total request size
+- Check JSON field sizes against `MAX_JSON_FIELD_BYTES` (default 4 MiB per field)
+- Check total request size against `MAX_REQUEST_BODY_BYTES` (default 9 MiB)
 - Review logs for specific error messages
