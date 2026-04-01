@@ -4,7 +4,7 @@ from typing import Any
 
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
 
-from ..schemas.hostfacts import HostFacts, HostFactsRepository
+from ..schemas import HostFacts, HostFactsRepository
 
 logger = logging.getLogger(__name__)
 

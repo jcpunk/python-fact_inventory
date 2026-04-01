@@ -31,20 +31,14 @@ from litestar.status_codes import (
     HTTP_429_TOO_MANY_REQUESTS,
     HTTP_500_INTERNAL_SERVER_ERROR,
 )
-from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..constants import MAX_REQUEST_BODY_BYTES
-from ..schemas.hostfacts import HostFacts, HostFactsWriteAPI
+from ..schemas import HostFacts, HostFactsWriteAPI
+from .responses import DetailResponse
 from .services import HostFactsService
 
 logger = logging.getLogger(__name__)
-
-
-class DetailResponse(BaseModel):
-    """Response envelope returned on both success and error paths."""
-
-    detail: str
 
 
 # ---------------------------------------------------------------------------
@@ -162,7 +156,7 @@ class HostFactController(Controller):
     # so ClassVar conflicts with the base class.
     tags: list[str] = ["v1"]  # noqa: RUF012
 
-    # See app/fact_inventory/constants.py for the rationale.
+    # See app/constants.py for the rationale.
     request_max_body_size: int = MAX_REQUEST_BODY_BYTES
 
     # Service injected by advanced-alchemy's DI provider.

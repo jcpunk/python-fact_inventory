@@ -1,4 +1,7 @@
-"""Public API for the hostfacts schema: model, repository, and DTO."""
+"""Database schemas for the fact_inventory application.
+
+Public API: model, repository, and DTO.
+"""
 
 from .apis import HostFactsWriteAPI
 from .models import HostFacts

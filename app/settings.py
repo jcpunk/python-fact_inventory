@@ -1,7 +1,7 @@
 """
 Load application configuration from environment variables and .env files.
 
-Set the RUNTIME environment variable to select `.env.${RUNTIME}`;
+Set the RUNTIME environment variable to select ``.env.${RUNTIME}``;
 defaults to the ``testing`` environment when unset.
 
 All configuration is exposed through the module-level ``settings`` instance.
@@ -12,12 +12,12 @@ Consumers should import and use that object directly::
 
 Configurable elements (production):
   - DATABASE_URI: str              (required)
-  - APP_NAME: str                  (default "host_inventory")
-  - FACT_INVENTORY_PREFIX: str     (default "fact_inventory")
+  - APP_NAME: str                  (default "fact_inventory")
   - RATE_LIMIT_UNIT: str           (default "hour"; second/minute/hour/day)
-  - RATE_LIMIT_MAX_REQUESTS: int   (default 1)
+  - RATE_LIMIT_MAX_REQUESTS: int   (default 2)
   - RETENTION_DAYS: int            (default 365)
   - CLEANUP_INTERVAL_HOURS: int    (default 24)
+  - CLEANUP_JITTER_MINUTES: int    (default 20; max random offset per cycle)
   - CREATE_ALL: bool               (default True)
   - DB_POOL_SIZE: int              (default 10)
   - DB_POOL_MAX_OVERFLOW: int      (default 20)
@@ -108,12 +108,12 @@ class Settings(BaseSettings):
     )
 
     database_uri: str = Field(...)
-    app_name: str = "host_inventory"
-    fact_inventory_prefix: str = "fact_inventory"
+    app_name: str = "fact_inventory"
     rate_limit_unit: DurationUnit = "hour"
-    rate_limit_max_requests: int = Field(default=1, ge=1)
+    rate_limit_max_requests: int = Field(default=2, ge=1)
     retention_days: int = Field(default=365, ge=1)
     cleanup_interval_hours: int = Field(default=24, ge=1)
+    cleanup_jitter_minutes: int = Field(default=20, ge=0)
     create_all: bool = True
     db_pool_size: int = Field(default=10, ge=1)
     db_pool_max_overflow: int = Field(default=20, ge=0)
@@ -154,5 +154,3 @@ logging_config = LoggingConfig(
     },
 )
 logging_config.configure()
-
-logger = logging.getLogger(__name__)
