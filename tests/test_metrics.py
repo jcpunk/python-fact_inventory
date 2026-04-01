@@ -2,7 +2,11 @@
 Tests for the Prometheus /metrics endpoint.
 """
 
-from litestar.status_codes import HTTP_200_OK, HTTP_405_METHOD_NOT_ALLOWED
+from litestar.status_codes import (
+    HTTP_200_OK,
+    HTTP_404_NOT_FOUND,
+    HTTP_405_METHOD_NOT_ALLOWED,
+)
 from litestar.testing import AsyncTestClient
 
 
@@ -38,3 +42,25 @@ class TestPrometheusMetrics:
         """PATCH is not allowed on the metrics endpoint."""
         response = await client.patch("/metrics", json={})
         assert response.status_code == HTTP_405_METHOD_NOT_ALLOWED
+
+
+class TestPrometheusMetricsDisabled:
+    """Tests for the GET /metrics endpoint when ENABLE_METRICS=false."""
+
+    async def test_metrics_returns_404_when_disabled(
+        self, client_no_metrics: AsyncTestClient
+    ) -> None:
+        """When metrics are disabled, /metrics must return 404."""
+        response = await client_no_metrics.get("/metrics")
+        assert response.status_code == HTTP_404_NOT_FOUND
+
+    async def test_v1_facts_still_reachable_when_metrics_disabled(
+        self, client_no_metrics: AsyncTestClient
+    ) -> None:
+        """Disabling metrics must not affect the main API endpoints."""
+        response = await client_no_metrics.post(
+            "/v1/facts",
+            json={"system_facts": {}, "package_facts": {}},
+            headers={"X-Forwarded-For": "10.0.0.1"},
+        )
+        assert response.status_code != HTTP_404_NOT_FOUND

@@ -4,7 +4,11 @@ Tests for the /health endpoint.
 
 from unittest.mock import AsyncMock, patch
 
-from litestar.status_codes import HTTP_200_OK, HTTP_405_METHOD_NOT_ALLOWED
+from litestar.status_codes import (
+    HTTP_200_OK,
+    HTTP_404_NOT_FOUND,
+    HTTP_405_METHOD_NOT_ALLOWED,
+)
 from litestar.testing import AsyncTestClient
 
 
@@ -90,3 +94,32 @@ class TestHealthCheck:
         for _ in range(5):
             response = await client.get("/health")
             assert response.status_code == HTTP_200_OK
+
+
+class TestHealthEndpointsDisabled:
+    """Tests for /health and /ready when ENABLE_HEALTH_ENDPOINTS=false."""
+
+    async def test_health_returns_404_when_disabled(
+        self, client_no_health: AsyncTestClient
+    ) -> None:
+        """When health endpoints are disabled, /health must return 404."""
+        response = await client_no_health.get("/health")
+        assert response.status_code == HTTP_404_NOT_FOUND
+
+    async def test_ready_returns_404_when_disabled(
+        self, client_no_health: AsyncTestClient
+    ) -> None:
+        """When health endpoints are disabled, /ready must return 404."""
+        response = await client_no_health.get("/ready")
+        assert response.status_code == HTTP_404_NOT_FOUND
+
+    async def test_v1_facts_still_reachable_when_health_disabled(
+        self, client_no_health: AsyncTestClient
+    ) -> None:
+        """Disabling health endpoints must not affect the main API endpoints."""
+        response = await client_no_health.post(
+            "/v1/facts",
+            json={"system_facts": {}, "package_facts": {}},
+            headers={"X-Forwarded-For": "10.0.0.1"},
+        )
+        assert response.status_code != HTTP_404_NOT_FOUND

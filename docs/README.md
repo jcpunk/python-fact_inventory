@@ -74,6 +74,8 @@ export RUNTIME=testing     # loads .env.testing (default)
 | `DB_POOL_TIMEOUT`         | no       | `30`             | Seconds to wait for a connection from the pool (PostgreSQL only)           |
 | `DEBUG`                   | no       | `false`          | Enable debug mode and OpenAPI docs                                         |
 | `LOG_LEVEL`               | no       | `INFO`           | Logging level (DEBUG, INFO, WARNING, ERROR; forced to DEBUG if DEBUG=true) |
+| `ENABLE_METRICS`          | no       | `true`           | Expose `/metrics` and enable Prometheus middleware. Set `false` when embedding inside a larger app that owns its own top-level metrics endpoint. OpenTelemetry tracing middleware is always active regardless of this flag |
+| `ENABLE_HEALTH_ENDPOINTS` | no       | `true`           | Expose `/health` and `/ready` probes. Set `false` when embedding and the parent app provides its own health probes |
 
 Create a `.env.{RUNTIME}` file with:
 
@@ -93,6 +95,8 @@ DB_POOL_MAX_OVERFLOW=20
 DB_POOL_TIMEOUT=30
 DEBUG=false
 LOG_LEVEL=INFO
+ENABLE_METRICS=true
+ENABLE_HEALTH_ENDPOINTS=true
 ```
 
 ## Running the Application

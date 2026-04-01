@@ -27,6 +27,16 @@ Configurable elements (production):
   - DEBUG: bool                    (default False)
   - VERSION: str                   (default: package metadata,
                                     then git commit, then "unknown")
+  - ENABLE_METRICS: bool           (default True; set False to suppress the
+                                    /metrics endpoint and Prometheus
+                                    middleware -- useful when embedding this
+                                    app inside a larger Litestar application
+                                    that owns its own top-level metrics;
+                                    OpenTelemetry tracing is always active)
+  - ENABLE_HEALTH_ENDPOINTS: bool  (default True; set False to suppress the
+                                    /health and /ready endpoints -- useful
+                                    when embedding and the parent app exposes
+                                    its own health probes)
 
 Additional configurable elements (for development with uvicorn):
   - HOST: str = see main.py
@@ -121,6 +131,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     debug: bool = False
     version: str = "unknown"
+    enable_metrics: bool = True
+    enable_health_endpoints: bool = True
 
     @model_validator(mode="after")
     def _resolve_version(self) -> Self:

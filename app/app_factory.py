@@ -79,12 +79,6 @@ def create_app() -> Litestar:
     )
 
     # ------------------------------------------------------------------
-    # Observability
-    # ------------------------------------------------------------------
-    otel_config = OpenTelemetryConfig()
-    prometheus_config = PrometheusConfig(app_name=settings.app_name)
-
-    # ------------------------------------------------------------------
     # Background retention cleanup
     # ------------------------------------------------------------------
     async def _purge_expired_facts() -> None:
@@ -105,15 +99,27 @@ def create_app() -> Litestar:
     )
 
     # ------------------------------------------------------------------
+    # Observability and route assembly
+    # ------------------------------------------------------------------
+    otel_config = OpenTelemetryConfig()
+    route_handlers: list[Any] = [create_router()]
+    middleware: list[Any] = [otel_config.middleware]
+
+    if settings.enable_metrics:
+        prometheus_config = PrometheusConfig(app_name=settings.app_name)
+        route_handlers.append(PrometheusController)
+        middleware.append(prometheus_config.middleware)
+        logger.info("Prometheus metrics enabled")
+    else:
+        logger.info("Prometheus metrics disabled (ENABLE_METRICS=false)")
+
+    # ------------------------------------------------------------------
     # Assemble the Litestar app
     # ------------------------------------------------------------------
     app_kwargs: dict[str, Any] = {
-        "route_handlers": [create_router(), PrometheusController],
+        "route_handlers": route_handlers,
         "plugins": [SQLAlchemyPlugin(config=alchemy_config), cleanup_plugin],
-        "middleware": [
-            otel_config.middleware,
-            prometheus_config.middleware,
-        ],
+        "middleware": middleware,
         "logging_config": logging_config,
         "debug": settings.debug,
     }

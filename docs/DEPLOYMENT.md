@@ -15,12 +15,12 @@ uvicorn app.app_factory:create_app --factory --host 0.0.0.0 --port 8000
 
 This binds to `http://0.0.0.0:8000` and exposes:
 
-| Path        | Description        |
-| ----------- | ------------------ |
-| `/health`   | Liveness probe     |
-| `/ready`    | Readiness probe    |
-| `/v1/facts` | Fact submission    |
-| `/metrics`  | Prometheus metrics |
+| Path        | Description                             |
+| ----------- | --------------------------------------- |
+| `/health`   | Liveness probe (requires ENABLE_HEALTH_ENDPOINTS=true) |
+| `/ready`    | Readiness probe (requires ENABLE_HEALTH_ENDPOINTS=true) |
+| `/v1/facts` | Fact submission                         |
+| `/metrics`  | Prometheus metrics (requires ENABLE_METRICS=true) |
 
 A reverse proxy in front of Uvicorn rewrites the external `/fact_inventory`
 prefix to `/` so the application never sees the prefix.
@@ -110,24 +110,48 @@ nginx strips `/fact_inventory` and Uvicorn sees `/v1/facts`, `/health`, etc.
 
 If you are building a larger Litestar application and want to mount
 fact_inventory as a sub-router under `/fact_inventory`, use the
-`create_router` factory with a path argument:
+`create_router` factory with a path argument.
+
+When embedding, the parent application typically owns its own top-level
+`/metrics` endpoint and health probes, making the built-in ones redundant.
+Set `ENABLE_METRICS=false` and/or `ENABLE_HEALTH_ENDPOINTS=false` to suppress
+them so the parent app's endpoints are not shadowed or duplicated.
 
 ```python
+import os
+
+os.environ["ENABLE_METRICS"] = "false"
+os.environ["ENABLE_HEALTH_ENDPOINTS"] = "false"
+
 from litestar import Litestar
-from litestar.plugins.prometheus import PrometheusController
+from litestar.plugins.prometheus import PrometheusConfig, PrometheusController
 
 from app.routes import create_router
 
-# Mount fact_inventory under /fact_inventory
+# Mount fact_inventory under /fact_inventory with its metrics/health
+# endpoints suppressed -- the parent app provides those.
 fact_inventory_router = create_router(path="/fact_inventory")
+
+prometheus_config = PrometheusConfig(app_name="my_app")
 
 app = Litestar(
     route_handlers=[fact_inventory_router, PrometheusController],
+    middleware=[prometheus_config.middleware],
     # ... other plugins, middleware, etc.
 )
 ```
 
-This produces:
+If you want to keep the fact_inventory health probes (e.g. to expose
+per-service liveness checks alongside the parent app's own probes), set
+only `ENABLE_METRICS=false`:
+
+```python
+os.environ["ENABLE_METRICS"] = "false"
+# ENABLE_HEALTH_ENDPOINTS defaults to true -- /health and /ready are kept.
+```
+
+With `ENABLE_HEALTH_ENDPOINTS=true` (the default), the embedded router
+produces:
 
 | External Path              | Internal Handler          |
 | -------------------------- | ------------------------- |
