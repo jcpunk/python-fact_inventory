@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
-from sqlalchemy import delete
+from sqlalchemy import CursorResult, delete
 
 from .models import HostFacts
 
@@ -23,8 +23,8 @@ class HostFactsRepository(SQLAlchemyAsyncRepository[HostFacts]):
         statement and reads the row count from the database cursor.
         """
         stmt = delete(self.model_type).where(self.model_type.updated_at < cutoff)
-        result = await self.session.execute(stmt)
-        count = result.rowcount
+        result: CursorResult[tuple[()]] = await self.session.execute(stmt)  # type: ignore[assignment]
+        count: int = result.rowcount
         if count:
             await self.session.commit()
         return count

@@ -15,10 +15,10 @@ from advanced_alchemy.extensions.litestar.exception_handler import (
     exception_to_http_response,
 )
 from advanced_alchemy.extensions.litestar.providers import (
-    Provide,
     create_service_provider,
 )
 from litestar import Controller, Request, Response, post
+from litestar.di import Provide
 from litestar.exceptions import HTTPException
 from litestar.openapi.datastructures import ResponseSpec
 from litestar.openapi.spec import Example
