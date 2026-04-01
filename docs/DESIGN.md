@@ -22,9 +22,9 @@ router = create_router(path="/fact_inventory")
 These operational endpoints are not tied to any API version and have no
 database-layer dependencies beyond the readiness probe:
 
-| Method | Path      | Description                                                                                |
-| ------ | --------- | ------------------------------------------------------------------------------------------ |
-| `GET`  | `/health` | Liveness probe -- HTTP 200 while the process is alive                                      |
+| Method | Path      | Description                                                                                 |
+| ------ | --------- | ------------------------------------------------------------------------------------------- |
+| `GET`  | `/health` | Liveness probe -- HTTP 200 while the process is alive                                       |
 | `GET`  | `/ready`  | Readiness probe -- HTTP 200 when the database is reachable (`SELECT 1`), HTTP 503 otherwise |
 
 ### /v1

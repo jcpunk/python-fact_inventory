@@ -11,13 +11,7 @@ from litestar.middleware.rate_limit import RateLimitConfig
 
 from .settings import settings
 from .unversioned import health_check, ready_check
-from .v1.controller import FactInventoryController as FactInventoryController_v1
-
-# v1 versioned API lives under /v1.
-_v1_router: Router = Router(
-    path="/v1",
-    route_handlers=[FactInventoryController_v1],
-)
+from .v1.router import v1_router
 
 
 def create_router(path: str = "/") -> Router:
@@ -42,6 +36,6 @@ def create_router(path: str = "/") -> Router:
 
     return Router(
         path=path,
-        route_handlers=[health_check, ready_check, _v1_router],
+        route_handlers=[health_check, ready_check, v1_router],
         middleware=[rate_limit_config.middleware],
     )

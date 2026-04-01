@@ -132,6 +132,8 @@ class DailyCleanupPlugin(InitPluginProtocol):
         """Infinite loop: sleep then run the cleanup callable."""
         while True:
             # Sleep *first* so we never delay application startup.
+            # We don't need strong randomness for the startup jitter
+            # S311 is suppressed accordingly.
             jitter = random.uniform(0, self._jitter) if self._jitter else 0  # noqa: S311
             sleep_time = self._interval + jitter
             await asyncio.sleep(sleep_time)

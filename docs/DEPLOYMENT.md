@@ -15,12 +15,12 @@ uvicorn app.app_factory:create_app --factory --host 0.0.0.0 --port 8000
 
 This binds to `http://0.0.0.0:8000` and exposes:
 
-| Path         | Description        |
-| ------------ | ------------------ |
-| `/health`    | Liveness probe     |
-| `/ready`     | Readiness probe    |
-| `/v1/facts`  | Fact submission    |
-| `/metrics`   | Prometheus metrics |
+| Path        | Description        |
+| ----------- | ------------------ |
+| `/health`   | Liveness probe     |
+| `/ready`    | Readiness probe    |
+| `/v1/facts` | Fact submission    |
+| `/metrics`  | Prometheus metrics |
 
 A reverse proxy in front of Uvicorn rewrites the external `/fact_inventory`
 prefix to `/` so the application never sees the prefix.
@@ -129,11 +129,11 @@ app = Litestar(
 
 This produces:
 
-| External Path                   | Internal Handler      |
-| ------------------------------- | --------------------- |
-| `/fact_inventory/health`        | `health_check()`      |
-| `/fact_inventory/ready`         | `ready_check()`       |
-| `/fact_inventory/v1/facts`      | `FactInventoryController`  |
+| External Path              | Internal Handler          |
+| -------------------------- | ------------------------- |
+| `/fact_inventory/health`   | `health_check()`          |
+| `/fact_inventory/ready`    | `ready_check()`           |
+| `/fact_inventory/v1/facts` | `FactInventoryController` |
 
 ---
 

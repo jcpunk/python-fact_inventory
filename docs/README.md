@@ -59,21 +59,21 @@ export RUNTIME=testing     # loads .env.testing (default)
 
 ### Environment Variables
 
-| Variable                    | Required | Default          | Description                                                          |
-| --------------------------- | -------- | ---------------- | -------------------------------------------------------------------- |
-| `DATABASE_URI`              | **yes**  | --               | Database connection string (PostgreSQL recommended)                  |
-| `APP_NAME`                  | no       | `fact_inventory` | Application name used in metrics and OpenAPI docs                    |
-| `RATE_LIMIT_UNIT`           | no       | `hour`           | Time unit for rate limiting (`second`, `minute`, `hour`, or `day`)   |
-| `RATE_LIMIT_MAX_REQUESTS`   | no       | `2`              | Maximum requests allowed per rate limit unit                         |
-| `RETENTION_DAYS`            | no       | `365`            | Days to retain host records before automatic purge                   |
-| `CLEANUP_INTERVAL_HOURS`    | no       | `24`             | Hours between background cleanup runs                                |
-| `CLEANUP_JITTER_MINUTES`    | no       | `20`             | Max random offset per cleanup cycle (prevents thundering-herd)       |
-| `CREATE_ALL`                | no       | `true`           | Auto-create tables on startup, bypassing Alembic                     |
-| `DB_POOL_SIZE`              | no       | `10`             | Database connection pool size (PostgreSQL only)                      |
-| `DB_POOL_MAX_OVERFLOW`      | no       | `20`             | Max connections above pool size (PostgreSQL only)                    |
-| `DB_POOL_TIMEOUT`           | no       | `30`             | Seconds to wait for a connection from the pool (PostgreSQL only)     |
-| `DEBUG`                     | no       | `false`          | Enable debug mode and OpenAPI docs                                   |
-| `LOG_LEVEL`                 | no       | `INFO`           | Logging level (DEBUG, INFO, WARNING, ERROR; forced to DEBUG if DEBUG=true) |
+| Variable                  | Required | Default          | Description                                                                |
+| ------------------------- | -------- | ---------------- | -------------------------------------------------------------------------- |
+| `DATABASE_URI`            | **yes**  | --               | Database connection string (PostgreSQL recommended)                        |
+| `APP_NAME`                | no       | `fact_inventory` | Application name used in metrics and OpenAPI docs                          |
+| `RATE_LIMIT_UNIT`         | no       | `hour`           | Time unit for rate limiting (`second`, `minute`, `hour`, or `day`)         |
+| `RATE_LIMIT_MAX_REQUESTS` | no       | `2`              | Maximum requests allowed per rate limit unit                               |
+| `RETENTION_DAYS`          | no       | `365`            | Days to retain host records before automatic purge                         |
+| `CLEANUP_INTERVAL_HOURS`  | no       | `24`             | Hours between background cleanup runs                                      |
+| `CLEANUP_JITTER_MINUTES`  | no       | `20`             | Max random offset per cleanup cycle (prevents thundering-herd)             |
+| `CREATE_ALL`              | no       | `true`           | Auto-create tables on startup, bypassing Alembic                           |
+| `DB_POOL_SIZE`            | no       | `10`             | Database connection pool size (PostgreSQL only)                            |
+| `DB_POOL_MAX_OVERFLOW`    | no       | `20`             | Max connections above pool size (PostgreSQL only)                          |
+| `DB_POOL_TIMEOUT`         | no       | `30`             | Seconds to wait for a connection from the pool (PostgreSQL only)           |
+| `DEBUG`                   | no       | `false`          | Enable debug mode and OpenAPI docs                                         |
+| `LOG_LEVEL`               | no       | `INFO`           | Logging level (DEBUG, INFO, WARNING, ERROR; forced to DEBUG if DEBUG=true) |
 
 Create a `.env.{RUNTIME}` file with:
 
