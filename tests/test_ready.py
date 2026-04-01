@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, patch
 
 from litestar.status_codes import (
     HTTP_200_OK,
+    HTTP_404_NOT_FOUND,
     HTTP_405_METHOD_NOT_ALLOWED,
     HTTP_503_SERVICE_UNAVAILABLE,
 )
@@ -173,3 +174,32 @@ class TestReadinessCheck:
         for _ in range(5):
             response = await client.get("/ready")
             assert response.status_code == HTTP_200_OK
+
+
+class TestReadyEndpointDisabled:
+    """Tests for /ready when ENABLE_READY_ENDPOINT=false."""
+
+    async def test_ready_returns_404_when_disabled(
+        self, client_no_ready: AsyncTestClient
+    ) -> None:
+        """When the readiness endpoint is disabled, /ready must return 404."""
+        response = await client_no_ready.get("/ready")
+        assert response.status_code == HTTP_404_NOT_FOUND
+
+    async def test_health_still_reachable_when_ready_disabled(
+        self, client_no_ready: AsyncTestClient
+    ) -> None:
+        """Disabling /ready must not affect /health -- they are independent flags."""
+        response = await client_no_ready.get("/health")
+        assert response.status_code == HTTP_200_OK
+
+    async def test_v1_facts_still_reachable_when_ready_disabled(
+        self, client_no_ready: AsyncTestClient
+    ) -> None:
+        """Disabling /ready must not affect the main API endpoints."""
+        response = await client_no_ready.post(
+            "/v1/facts",
+            json={"system_facts": {}, "package_facts": {}},
+            headers={"X-Forwarded-For": "10.0.0.1"},
+        )
+        assert response.status_code != HTTP_404_NOT_FOUND

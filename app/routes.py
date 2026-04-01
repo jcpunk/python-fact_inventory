@@ -2,8 +2,8 @@
 Route registry and router factory for the fact_inventory application.
 
 ``create_router`` builds a Litestar ``Router`` that includes all route
-handlers with rate limiting already applied.  Health and readiness probes
-are excluded from rate limiting when enabled.
+handlers with rate limiting already applied.  The liveness and readiness
+probes are excluded from rate limiting when enabled.
 """
 
 from typing import Any
@@ -32,11 +32,17 @@ def create_router(path: str = "/") -> Router:
         A fully configured Litestar router.
     """
     rate_limit_excludes: list[str] = []
-    route_handlers: list[Any] = [v1_router]
+    route_handlers: list[Any] = []
 
-    if settings.enable_health_endpoints:
-        rate_limit_excludes = ["/health$", "/ready$"]
-        route_handlers = [health_check, ready_check, v1_router]
+    if settings.enable_health_endpoint:
+        route_handlers.append(health_check)
+        rate_limit_excludes.append("/health$")
+
+    if settings.enable_ready_endpoint:
+        route_handlers.append(ready_check)
+        rate_limit_excludes.append("/ready$")
+
+    route_handlers.append(v1_router)
 
     rate_limit_config = RateLimitConfig(
         rate_limit=(settings.rate_limit_unit, settings.rate_limit_max_requests),

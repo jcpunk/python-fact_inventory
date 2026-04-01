@@ -96,27 +96,27 @@ class TestHealthCheck:
             assert response.status_code == HTTP_200_OK
 
 
-class TestHealthEndpointsDisabled:
-    """Tests for /health and /ready when ENABLE_HEALTH_ENDPOINTS=false."""
+class TestHealthEndpointDisabled:
+    """Tests for /health when ENABLE_HEALTH_ENDPOINT=false."""
 
     async def test_health_returns_404_when_disabled(
         self, client_no_health: AsyncTestClient
     ) -> None:
-        """When health endpoints are disabled, /health must return 404."""
+        """When the liveness endpoint is disabled, /health must return 404."""
         response = await client_no_health.get("/health")
         assert response.status_code == HTTP_404_NOT_FOUND
 
-    async def test_ready_returns_404_when_disabled(
+    async def test_ready_still_reachable_when_health_disabled(
         self, client_no_health: AsyncTestClient
     ) -> None:
-        """When health endpoints are disabled, /ready must return 404."""
+        """Disabling /health must not affect /ready -- they are independent flags."""
         response = await client_no_health.get("/ready")
-        assert response.status_code == HTTP_404_NOT_FOUND
+        assert response.status_code == HTTP_200_OK
 
     async def test_v1_facts_still_reachable_when_health_disabled(
         self, client_no_health: AsyncTestClient
     ) -> None:
-        """Disabling health endpoints must not affect the main API endpoints."""
+        """Disabling /health must not affect the main API endpoints."""
         response = await client_no_health.post(
             "/v1/facts",
             json={"system_facts": {}, "package_facts": {}},

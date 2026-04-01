@@ -33,10 +33,14 @@ Configurable elements (production):
                                     app inside a larger Litestar application
                                     that owns its own top-level metrics;
                                     OpenTelemetry tracing is always active)
-  - ENABLE_HEALTH_ENDPOINTS: bool  (default True; set False to suppress the
-                                    /health and /ready endpoints -- useful
-                                    when embedding and the parent app exposes
-                                    its own health probes)
+  - ENABLE_HEALTH_ENDPOINT: bool   (default True; set False to suppress the
+                                    /health liveness probe -- useful when
+                                    embedding and the parent app provides its
+                                    own liveness check)
+  - ENABLE_READY_ENDPOINT: bool    (default True; set False to suppress the
+                                    /ready readiness probe -- useful when
+                                    embedding and the parent app provides its
+                                    own readiness check)
 
 Additional configurable elements (for development with uvicorn):
   - HOST: str = see main.py
@@ -132,7 +136,8 @@ class Settings(BaseSettings):
     debug: bool = False
     version: str = "unknown"
     enable_metrics: bool = True
-    enable_health_endpoints: bool = True
+    enable_health_endpoint: bool = True
+    enable_ready_endpoint: bool = True
 
     @model_validator(mode="after")
     def _resolve_version(self) -> Self:

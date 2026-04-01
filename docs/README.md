@@ -75,7 +75,8 @@ export RUNTIME=testing     # loads .env.testing (default)
 | `DEBUG`                   | no       | `false`          | Enable debug mode and OpenAPI docs                                         |
 | `LOG_LEVEL`               | no       | `INFO`           | Logging level (DEBUG, INFO, WARNING, ERROR; forced to DEBUG if DEBUG=true) |
 | `ENABLE_METRICS`          | no       | `true`           | Expose `/metrics` and enable Prometheus middleware. Set `false` when embedding inside a larger app that owns its own top-level metrics endpoint. OpenTelemetry tracing middleware is always active regardless of this flag |
-| `ENABLE_HEALTH_ENDPOINTS` | no       | `true`           | Expose `/health` and `/ready` probes. Set `false` when embedding and the parent app provides its own health probes |
+| `ENABLE_HEALTH_ENDPOINT`  | no       | `true`           | Expose the `/health` liveness probe. Set `false` when embedding and the parent app provides its own liveness check |
+| `ENABLE_READY_ENDPOINT`   | no       | `true`           | Expose the `/ready` readiness probe. Set `false` when embedding and the parent app provides its own readiness check |
 
 Create a `.env.{RUNTIME}` file with:
 
@@ -96,7 +97,8 @@ DB_POOL_TIMEOUT=30
 DEBUG=false
 LOG_LEVEL=INFO
 ENABLE_METRICS=true
-ENABLE_HEALTH_ENDPOINTS=true
+ENABLE_HEALTH_ENDPOINT=true
+ENABLE_READY_ENDPOINT=true
 ```
 
 ## Running the Application

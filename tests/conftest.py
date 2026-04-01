@@ -45,8 +45,8 @@ async def client_no_metrics(
 
 @pytest.fixture
 async def app_no_health(monkeypatch: pytest.MonkeyPatch) -> Litestar:
-    """Create a Litestar app with health/ready endpoints disabled."""
-    monkeypatch.setattr(_settings, "enable_health_endpoints", False)
+    """Create a Litestar app with the /health liveness endpoint disabled."""
+    monkeypatch.setattr(_settings, "enable_health_endpoint", False)
     return create_app()
 
 
@@ -54,6 +54,22 @@ async def app_no_health(monkeypatch: pytest.MonkeyPatch) -> Litestar:
 async def client_no_health(
     app_no_health: Litestar,
 ) -> AsyncGenerator[AsyncTestClient, None]:
-    """Provide an async test client for an app with health endpoints disabled."""
+    """Provide an async test client for an app with /health disabled."""
     async with AsyncTestClient(app=app_no_health) as client:
+        yield client
+
+
+@pytest.fixture
+async def app_no_ready(monkeypatch: pytest.MonkeyPatch) -> Litestar:
+    """Create a Litestar app with the /ready readiness endpoint disabled."""
+    monkeypatch.setattr(_settings, "enable_ready_endpoint", False)
+    return create_app()
+
+
+@pytest.fixture
+async def client_no_ready(
+    app_no_ready: Litestar,
+) -> AsyncGenerator[AsyncTestClient, None]:
+    """Provide an async test client for an app with /ready disabled."""
+    async with AsyncTestClient(app=app_no_ready) as client:
         yield client

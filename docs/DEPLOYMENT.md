@@ -17,8 +17,8 @@ This binds to `http://0.0.0.0:8000` and exposes:
 
 | Path        | Description                             |
 | ----------- | --------------------------------------- |
-| `/health`   | Liveness probe (requires ENABLE_HEALTH_ENDPOINTS=true) |
-| `/ready`    | Readiness probe (requires ENABLE_HEALTH_ENDPOINTS=true) |
+| `/health`   | Liveness probe (requires ENABLE_HEALTH_ENDPOINT=true) |
+| `/ready`    | Readiness probe (requires ENABLE_READY_ENDPOINT=true) |
 | `/v1/facts` | Fact submission                         |
 | `/metrics`  | Prometheus metrics (requires ENABLE_METRICS=true) |
 
@@ -114,14 +114,16 @@ fact_inventory as a sub-router under `/fact_inventory`, use the
 
 When embedding, the parent application typically owns its own top-level
 `/metrics` endpoint and health probes, making the built-in ones redundant.
-Set `ENABLE_METRICS=false` and/or `ENABLE_HEALTH_ENDPOINTS=false` to suppress
-them so the parent app's endpoints are not shadowed or duplicated.
+Set `ENABLE_METRICS=false`, `ENABLE_HEALTH_ENDPOINT=false`, and/or
+`ENABLE_READY_ENDPOINT=false` to suppress individual endpoints so the parent
+app's equivalents are not shadowed or duplicated.
 
 ```python
 import os
 
 os.environ["ENABLE_METRICS"] = "false"
-os.environ["ENABLE_HEALTH_ENDPOINTS"] = "false"
+os.environ["ENABLE_HEALTH_ENDPOINT"] = "false"
+os.environ["ENABLE_READY_ENDPOINT"] = "false"
 
 from litestar import Litestar
 from litestar.plugins.prometheus import PrometheusConfig, PrometheusController
@@ -141,16 +143,17 @@ app = Litestar(
 )
 ```
 
-If you want to keep the fact_inventory health probes (e.g. to expose
-per-service liveness checks alongside the parent app's own probes), set
-only `ENABLE_METRICS=false`:
+Each probe can be controlled independently.  For example, to keep
+per-service liveness checks while suppressing the readiness probe and
+metrics:
 
 ```python
 os.environ["ENABLE_METRICS"] = "false"
-# ENABLE_HEALTH_ENDPOINTS defaults to true -- /health and /ready are kept.
+os.environ["ENABLE_READY_ENDPOINT"] = "false"
+# ENABLE_HEALTH_ENDPOINT defaults to true -- /health is kept.
 ```
 
-With `ENABLE_HEALTH_ENDPOINTS=true` (the default), the embedded router
+With both probe flags set to `true` (the default), the embedded router
 produces:
 
 | External Path              | Internal Handler          |
