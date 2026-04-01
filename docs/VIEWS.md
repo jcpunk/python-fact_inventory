@@ -1,8 +1,8 @@
 # Example Views
 
-The `host_facts` table stores arbitrary JSON in `system_facts` and `package_facts`. PostgreSQL views let you expose commonly needed fields as simple columns that are easy to query, join, and export without writing JSONB operators every time.
+The `fact_inventory` table stores arbitrary JSON in `system_facts` and `package_facts`. PostgreSQL views let you expose commonly needed fields as simple columns that are easy to query, join, and export without writing JSONB operators every time.
 
-All views below are read-only projections over `host_facts`. They add no storage cost and always reflect current data.
+All views below are read-only projections over `fact_inventory`. They add no storage cost and always reflect current data.
 
 ## Host Overview
 
@@ -20,7 +20,7 @@ SELECT
     system_facts->>'architecture'                AS architecture,
     system_facts->>'kernel'                      AS kernel,
     system_facts->>'fqdn'                        AS fqdn
-FROM host_facts;
+FROM fact_inventory;
 ```
 
 ```sql
@@ -46,7 +46,7 @@ SELECT
     system_facts->>'hostname' AS hostname,
     updated_at,
     now() - updated_at        AS time_since_update
-FROM host_facts
+FROM fact_inventory
 WHERE updated_at < now() - interval '7 days';
 ```
 
@@ -65,7 +65,7 @@ SELECT
     hf.system_facts->>'hostname' AS hostname,
     pkg.key                      AS package_name,
     pkg.value                    AS package_versions
-FROM host_facts hf,
+FROM fact_inventory hf,
      LATERAL jsonb_each(hf.package_facts) AS pkg(key, value);
 ```
 
@@ -94,7 +94,7 @@ SELECT
     system_facts->>'distribution_version'        AS version,
     system_facts->>'distribution_major_version'  AS major_version,
     count(*)                                     AS host_count
-FROM host_facts
+FROM fact_inventory
 GROUP BY
     system_facts->>'distribution',
     system_facts->>'distribution_version',
@@ -118,7 +118,7 @@ SELECT
     system_facts->'default_ipv6'->>'address'         AS default_ipv6,
     system_facts->'default_ipv4'->>'interface'       AS ipv4_interface,
     system_facts->'default_ipv6'->>'interface'       AS ipv6_interface
-FROM host_facts;
+FROM fact_inventory;
 ```
 
 ```sql
@@ -132,6 +132,6 @@ SELECT client_address, hostname, default_ipv4
 ## Notes
 
 - Views are defined once and queried like regular tables.
-- Because they read from `host_facts` at query time, no extra storage is used.
+- Because they read from `fact_inventory` at query time, no extra storage is used.
 - For frequently run dashboard queries, consider creating a **materialized view** instead (`CREATE MATERIALIZED VIEW ...`). Materialized views cache results and can be refreshed on a schedule with `REFRESH MATERIALIZED VIEW`.
 - The JSON key names used above (`hostname`, `distribution`, etc.) match typical Ansible `setup` module output. Adjust them to match the facts your clients actually submit.

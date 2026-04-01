@@ -86,7 +86,7 @@ curl -X POST http://localhost:8000/v1/facts \
 
 ## Database
 
-### HostFacts:
+### FactInventory:
 
 Clients are organized by the IP address they use to connect to the endpoint and not by any data they provide.
 
@@ -94,7 +94,7 @@ Clients are organized by the IP address they use to connect to the endpoint and 
 - **Model Layer** (`schemas/models.py`): Data models
 - **API Layer** (`schemas/apis.py`): Translation layer from the API to the database objects
 
-#### `host_facts` Table
+#### `fact_inventory` Table
 
 | Column           | Type        | Description                           |
 | ---------------- | ----------- | ------------------------------------- |
@@ -107,12 +107,12 @@ Clients are organized by the IP address they use to connect to the endpoint and 
 
 #### Indexes
 
-- `ix_host_facts_created_at`: DESC index on row creation timestamp
-- `ix_host_facts_updated_at`: DESC index on row update timestamp
-- `ix_host_facts_client_address`: Index on client IP
-- `ix_host_facts_client_address_updated_at`: Multi column index for quickly finding client update time
-- `ix_host_facts_system_facts`: GIN index for PostgreSQL JSON queries, useless on other databases
-- `ix_host_facts_package_facts`: GIN index for PostgreSQL JSON queries, useless on other databases
+- `ix_fact_inventory_created_at`: DESC index on row creation timestamp
+- `ix_fact_inventory_updated_at`: DESC index on row update timestamp
+- `ix_fact_inventory_client_address`: Index on client IP
+- `ix_fact_inventory_client_address_updated_at`: Multi column index for quickly finding client update time
+- `ix_fact_inventory_system_facts`: GIN index for PostgreSQL JSON queries, useless on other databases
+- `ix_fact_inventory_package_facts`: GIN index for PostgreSQL JSON queries, useless on other databases
 
 ## Plugins
 
@@ -123,7 +123,7 @@ The `DailyCleanupPlugin` (`app/cleanup.py`) implements Litestar's
 data retention. It uses `lifespan` context managers so startup and shutdown
 are handled in a single, self-contained block.
 
-- Runs `purge_expired_hosts()` to delete records with an `updated_at` older
+- Runs `purge_expired_facts()` to delete records with an `updated_at` older
   than `RETENTION_DAYS` (default 365).
 - The cleanup interval is controlled by `CLEANUP_INTERVAL_HOURS` (default 24).
 - A configurable jitter (`CLEANUP_JITTER_MINUTES`, default 20) is added to each

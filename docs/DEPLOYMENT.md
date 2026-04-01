@@ -133,7 +133,7 @@ This produces:
 | ------------------------------- | --------------------- |
 | `/fact_inventory/health`        | `health_check()`      |
 | `/fact_inventory/ready`         | `ready_check()`       |
-| `/fact_inventory/v1/facts`      | `HostFactController`  |
+| `/fact_inventory/v1/facts`      | `FactInventoryController`  |
 
 ---
 

@@ -3,8 +3,8 @@
 Public API: model, repository, and DTO.
 """
 
-from .apis import HostFactsWriteAPI
-from .models import HostFacts
-from .repositories import HostFactsRepository
+from .apis import FactInventoryWriteAPI
+from .models import FactInventory
+from .repositories import FactInventoryRepository
 
-__all__ = ["HostFacts", "HostFactsRepository", "HostFactsWriteAPI"]
+__all__ = ["FactInventory", "FactInventoryRepository", "FactInventoryWriteAPI"]

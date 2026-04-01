@@ -1,4 +1,4 @@
-"""Database model for the ``host_facts`` table."""
+"""Database model for the ``fact_inventory`` table."""
 
 from typing import Any
 
@@ -8,9 +8,9 @@ from sqlalchemy.dialects.postgresql import INET, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 
-class HostFacts(UUIDAuditBase):
+class FactInventory(UUIDAuditBase):
     """
-    Database model for storing host information and facts.
+    Database model for storing per-client system and package facts.
 
     This table stores JSON data (collected from Ansible facts).
 
@@ -38,12 +38,12 @@ class HostFacts(UUIDAuditBase):
     Attributes:
         created_at: Timestamp when the record was created
         updated_at: Timestamp when the record was modified
-        client_address: IP address of the submitting host (IPv4/IPv6)
+        client_address: IP address of the submitting client (IPv4/IPv6)
         system_facts: JSON object containing system facts
         package_facts: JSON object containing package facts
     """
 
-    __tablename__ = "host_facts"
+    __tablename__ = "fact_inventory"
 
     client_address: Mapped[str] = mapped_column(
         String(45).with_variant(INET, "postgresql"),
@@ -68,27 +68,31 @@ class HostFacts(UUIDAuditBase):
 
     __table_args__ = (
         Index(
-            "ix_host_facts_created_at",
+            "ix_fact_inventory_created_at",
             "created_at",
             postgresql_ops={"created_at": "DESC"},  # Used for sorting
         ),
         Index(
-            "ix_host_facts_updated_at",
+            "ix_fact_inventory_updated_at",
             "updated_at",
             postgresql_ops={"updated_at": "DESC"},  # Used for sorting
         ),
-        Index("ix_host_facts_client_address", "client_address"),
+        Index("ix_fact_inventory_client_address", "client_address"),
         Index(
-            "ix_host_facts_client_address_updated_at", "client_address", "updated_at"
+            "ix_fact_inventory_client_address_updated_at",
+            "client_address",
+            "updated_at",
         ),
         # PostgreSQL: GIN indexes for efficient JSON querying
-        Index("ix_host_facts_system_facts", "system_facts", postgresql_using="gin"),
-        Index("ix_host_facts_package_facts", "package_facts", postgresql_using="gin"),
+        Index("ix_fact_inventory_system_facts", "system_facts", postgresql_using="gin"),
+        Index(
+            "ix_fact_inventory_package_facts", "package_facts", postgresql_using="gin"
+        ),
     )
 
     def __repr__(self) -> str:
         return (
-            f"<HostFacts client_address={self.client_address}"
+            f"<FactInventory client_address={self.client_address}"
             f" created_at={self.created_at}"
             f" updated_at={self.updated_at}>"
         )

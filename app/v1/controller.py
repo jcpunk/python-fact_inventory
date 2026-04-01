@@ -4,7 +4,7 @@ This module defines the HTTP endpoint for submitting system and package
 facts.  It is intentionally thin: validation is handled by the DTO layer,
 rate limiting by Litestar's ``RateLimitMiddleware``, database exceptions by
 advanced-alchemy's ``exception_to_http_response``, and persistence by the
-injected ``HostFactsService``.
+injected ``FactInventoryService``.
 """
 
 import logging
@@ -34,15 +34,15 @@ from litestar.status_codes import (
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..constants import MAX_REQUEST_BODY_BYTES
-from ..schemas import HostFacts, HostFactsWriteAPI
+from ..schemas import FactInventory, FactInventoryWriteAPI
 from .responses import DetailResponse
-from .services import HostFactsService
+from .services import FactInventoryService
 
 logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# OpenAPI response specs for HostFactController.submit
+# OpenAPI response specs for FactInventoryController.submit
 # Kept as module-level dicts so that success and error cases are clearly
 # separated and each entry can carry a precise, actionable description.
 # ---------------------------------------------------------------------------
@@ -137,14 +137,14 @@ _SUBMIT_ERROR_RESPONSES: dict[int, Any] = {
 }
 
 
-class HostFactController(Controller):
+class FactInventoryController(Controller):
     """REST API controller for handling fact submissions.
 
     Rate limiting is handled externally by Litestar's
     ``RateLimitMiddleware`` (configured in the application factory).
     This controller is responsible only for validation and persistence.
 
-    The ``HostFactsService`` is injected via Litestar's dependency-injection
+    The ``FactInventoryService`` is injected via Litestar's dependency-injection
     system using advanced-alchemy's ``create_service_provider``.  Database
     ``RepositoryError`` exceptions are mapped to HTTP responses by
     advanced-alchemy's ``exception_to_http_response`` handler.
@@ -161,7 +161,9 @@ class HostFactController(Controller):
 
     # Service injected by advanced-alchemy's DI provider.
     dependencies: dict[str, Any] = {  # noqa: RUF012
-        "host_facts_service": Provide(create_service_provider(HostFactsService)),
+        "fact_inventory_service": Provide(
+            create_service_provider(FactInventoryService)
+        ),
     }
 
     # Map advanced-alchemy RepositoryError to proper HTTP responses.
@@ -171,14 +173,14 @@ class HostFactController(Controller):
 
     @post(
         "",
-        dto=HostFactsWriteAPI,
+        dto=FactInventoryWriteAPI,
         description="Submit system and package facts",
         responses={**_SUBMIT_SUCCESS_RESPONSES, **_SUBMIT_ERROR_RESPONSES},
     )
     async def submit(
         self,
         data: Annotated[
-            HostFacts,
+            FactInventory,
             Body(
                 examples=[
                     Example(
@@ -218,7 +220,7 @@ class HostFactController(Controller):
             ),
         ],
         request: Request[Any, Any, Any],
-        host_facts_service: HostFactsService,
+        fact_inventory_service: FactInventoryService,
     ) -> Response[Any]:
         """Store submitted system and package facts.
 
@@ -235,7 +237,7 @@ class HostFactController(Controller):
         logger.info("Facts submission from %s", client_address)
 
         try:
-            await host_facts_service.upsert_host_facts(
+            await fact_inventory_service.upsert_facts(
                 data={
                     "client_address": client_address,
                     "system_facts": data.system_facts,

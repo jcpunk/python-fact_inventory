@@ -7,11 +7,11 @@ from advanced_alchemy.extensions.litestar import SQLAlchemyDTO, SQLAlchemyDTOCon
 from pydantic import field_validator
 
 from ..constants import MAX_JSON_FIELD_BYTES
-from .models import HostFacts
+from .models import FactInventory
 
 
-class HostFactsWriteAPI(SQLAlchemyDTO[HostFacts]):
-    """DTO that exposes only the writable fields of HostFacts to API consumers."""
+class FactInventoryWriteAPI(SQLAlchemyDTO[FactInventory]):
+    """DTO that exposes only the writable fields of FactInventory to API consumers."""
 
     config = SQLAlchemyDTOConfig(
         exclude={

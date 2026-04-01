@@ -11,12 +11,12 @@ from litestar.middleware.rate_limit import RateLimitConfig
 
 from .settings import settings
 from .unversioned import health_check, ready_check
-from .v1.controller import HostFactController as HostFactController_v1
+from .v1.controller import FactInventoryController as FactInventoryController_v1
 
 # v1 versioned API lives under /v1.
 _v1_router: Router = Router(
     path="/v1",
-    route_handlers=[HostFactController_v1],
+    route_handlers=[FactInventoryController_v1],
 )
 
 

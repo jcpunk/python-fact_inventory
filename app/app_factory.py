@@ -31,7 +31,7 @@ from litestar.plugins.prometheus import PrometheusConfig, PrometheusController
 from .cleanup import DailyCleanupPlugin
 from .routes import create_router
 from .settings import logging_config, settings
-from .v1.services import HostFactsService
+from .v1.services import FactInventoryService
 
 logger = logging.getLogger(__name__)
 
@@ -81,21 +81,21 @@ def create_app() -> Litestar:
     # ------------------------------------------------------------------
     # Background retention cleanup
     # ------------------------------------------------------------------
-    async def _purge_expired_hosts() -> None:
-        """Purge host records older than the configured retention window.
+    async def _purge_expired_facts() -> None:
+        """Purge fact records older than the configured retention window.
 
         Creates its own short-lived database session so the background
         task is fully independent of any request-scoped session.
         """
         async with alchemy_config.get_session() as session:
-            service = HostFactsService(session)
-            await service.purge_expired_hosts(settings.retention_days)
+            service = FactInventoryService(session)
+            await service.purge_expired_facts(settings.retention_days)
 
     cleanup_plugin = DailyCleanupPlugin(
-        cleanup_fn=_purge_expired_hosts,
+        cleanup_fn=_purge_expired_facts,
         interval_seconds=settings.cleanup_interval_hours * 3600,
         jitter_seconds=settings.cleanup_jitter_minutes * 60,
-        name="host-retention-cleanup",
+        name="fact-inventory-cleanup",
     )
 
     # ------------------------------------------------------------------

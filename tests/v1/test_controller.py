@@ -1,10 +1,10 @@
 """
-Tests for the FactController HTTP endpoints.
+Tests for the FactInventoryController HTTP endpoints.
 """
 
 from unittest.mock import AsyncMock, patch
 
-from app.v1.services import HostFactsService
+from app.v1.services import FactInventoryService
 from litestar.status_codes import (
     HTTP_201_CREATED,
     HTTP_400_BAD_REQUEST,
@@ -343,8 +343,8 @@ class TestFactControllerSubmit:
     ) -> None:
         """A storage error must return HTTP 409."""
         with patch.object(
-            HostFactsService,
-            "upsert_host_facts",
+            FactInventoryService,
+            "upsert_facts",
             new_callable=AsyncMock,
             side_effect=SQLAlchemyError("simulated write failure"),
         ):
@@ -359,8 +359,8 @@ class TestFactControllerSubmit:
     ) -> None:
         """409 response must be JSON."""
         with patch.object(
-            HostFactsService,
-            "upsert_host_facts",
+            FactInventoryService,
+            "upsert_facts",
             new_callable=AsyncMock,
             side_effect=SQLAlchemyError("simulated write failure"),
         ):
@@ -375,8 +375,8 @@ class TestFactControllerSubmit:
     ) -> None:
         """409 response body must contain a 'detail' key."""
         with patch.object(
-            HostFactsService,
-            "upsert_host_facts",
+            FactInventoryService,
+            "upsert_facts",
             new_callable=AsyncMock,
             side_effect=SQLAlchemyError("simulated write failure"),
         ):
@@ -391,8 +391,8 @@ class TestFactControllerSubmit:
     ) -> None:
         """409 detail must not reveal internal storage implementation details."""
         with patch.object(
-            HostFactsService,
-            "upsert_host_facts",
+            FactInventoryService,
+            "upsert_facts",
             new_callable=AsyncMock,
             side_effect=SQLAlchemyError("simulated write failure"),
         ):
@@ -414,8 +414,8 @@ class TestFactControllerSubmit:
     ) -> None:
         """An unexpected exception during storage must return HTTP 500."""
         with patch.object(
-            HostFactsService,
-            "upsert_host_facts",
+            FactInventoryService,
+            "upsert_facts",
             new_callable=AsyncMock,
             side_effect=RuntimeError("something went very wrong"),
         ):
