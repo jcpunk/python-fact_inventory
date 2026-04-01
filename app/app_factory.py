@@ -44,6 +44,12 @@ def create_app() -> Litestar:
     Litestar
         The application instance ready to be served by an ASGI server.
     """
+    # Configure logging first so that every log call inside this function
+    # (before the Litestar constructor runs) reaches the correct handler.
+    # Litestar will call logging_config.configure() again via its
+    # "logging_config" kwarg, which is idempotent.
+    logging_config.configure()
+
     # ------------------------------------------------------------------
     # Database plugin setup
     # ------------------------------------------------------------------

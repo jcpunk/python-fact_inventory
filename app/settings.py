@@ -143,14 +143,27 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # ----------------------------------------------------------------------
-# Logging infrastructure - built from the resolved settings and applied
-# immediately so every module-level logger created at import time
-# (including this one) uses the correct level, handler, and formatter.
+# Logging infrastructure
+#
+# The LoggingConfig object is passed to Litestar via the "logging_config"
+# kwarg; Litestar calls .configure() during app startup.  We deliberately
+# do NOT call .configure() here at import time: doing so would install a
+# StreamHandler on the root logger as a side-effect of importing this
+# module, which poisons pytest's stream-capture context and causes
+# "ValueError: I/O operation on closed file" on Python 3.14 when
+# aiosqlite's background worker thread outlives the event loop.
+#
+# aiosqlite is pinned to WARNING even when the root level is DEBUG because
+# its messages ("executing ...", "operation ... completed") describe
+# internal connection-worker plumbing that is not useful to application
+# developers.  All other loggers inherit the root level.
 # ----------------------------------------------------------------------
 logging_config = LoggingConfig(
     root={"level": logging.getLevelName(settings.log_level), "handlers": ["console"]},
     formatters={
         "standard": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"}
     },
+    loggers={
+        "aiosqlite": {"level": "WARNING", "handlers": ["console"], "propagate": False},
+    },
 )
-logging_config.configure()
