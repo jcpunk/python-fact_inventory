@@ -1,3 +1,5 @@
+"""Database access layer for the ``fact_inventory`` table."""
+
 from datetime import datetime
 from typing import Any, cast
 

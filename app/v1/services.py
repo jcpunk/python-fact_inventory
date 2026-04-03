@@ -1,3 +1,5 @@
+"""Business-logic layer for the fact_inventory v1 API."""
+
 import datetime
 import logging
 from typing import Any

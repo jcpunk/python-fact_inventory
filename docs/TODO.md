@@ -1,12 +1,16 @@
-# Database
+# TODO
+
+Outstanding work items, grouped by area.  Items are not prioritised.
+
+## Database
 
 - [ ] Convert to `alembic` integrations provided by `advanced_alchemy`
 - [ ] Develop partitioning plan/recommendations
 
-# Application
+## Application
 
 - [ ] Guard Prometheus endpoint against abuse
 
-# Repository
+## Repository
 
-- [ ] Setup CI to check for compat with latest project dependencies
+- [ ] Set up CI to check for compatibility with the latest project dependencies

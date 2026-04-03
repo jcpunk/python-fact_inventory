@@ -4,7 +4,7 @@
 
 Install with development dependencies:
 
-```shell
+```bash
 uv sync --group dev
 ```
 
@@ -15,6 +15,12 @@ This includes:
 - mypy
 - ruff
 - pre-commit
+
+Install the pre-commit hooks once after cloning:
+
+```bash
+uv run pre-commit install
+```
 
 ## Running the Application
 
@@ -28,7 +34,7 @@ uv run python -m app.main
 
 Run tests with pytest:
 
-```shell
+```bash
 uv run pytest
 ```
 
@@ -54,9 +60,8 @@ The project uses pre-commit hooks for code quality:
 
 Run checks manually:
 
-```shell
-# Run all pre-commit hooks
-uv run pre-commit install
+```bash
+# Run all pre-commit hooks against every file
 uv run pre-commit run --all-files
 
 # Run ruff

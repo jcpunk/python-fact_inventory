@@ -44,7 +44,7 @@ uv sync
 
 3. Configure environment variables (see Configuration section)
 
-4. In version 1 of the application, the database tables are automatically created if missing.
+4. Database tables are created automatically on startup when `CREATE_ALL=true` (the default). For production migrations, disable `CREATE_ALL` and use Alembic instead.
 
 ## Configuration
 

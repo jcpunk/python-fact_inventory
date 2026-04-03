@@ -1,3 +1,5 @@
+"""Development entry point -- creates the ASGI app and optionally runs uvicorn."""
+
 import logging
 import os
 

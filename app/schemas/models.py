@@ -10,38 +10,22 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 
 class FactInventory(UUIDAuditBase):
-    """
-    Database model for storing per-client system and package facts.
+    """ORM model for the ``fact_inventory`` table.
 
-    This table stores JSON data (collected from Ansible facts).
+    Stores one record per connecting client IP address.  The JSON columns
+    hold arbitrary data submitted by the client (for example Ansible
+    ``setup`` facts).  See ``docs/VIEWS.md`` for PostgreSQL views that
+    project commonly-used JSON keys into queryable columns.
 
-    Indexing the JSON fields is difficult in a general purpose engine.
-    There are database specific indexes you could apply to JSON objects.
-    However, these indexes have non-standard query syntax.
+    The primary key is the composite ``(id, client_address)``, where
+    ``id`` is a UUID surrogate key provided by ``UUIDAuditBase`` and
+    ``client_address`` is the unique business identifier.
 
-    You may be better off creating a virtual table/view with the parts
-    you intend to use.  See docs/VIEWS.md for examples.
-
-    This model is optimized for use with PostgreSQL and will create
-    an index on the system_facts and package_facts JSON.
-
-    These indexes are useless on other database backends but permits
-    PostgreSQL specific JSON query syntax.
-
-    NOTE:
-    The index on system_facts is enormous!
-    The index on package_facts is enormous!
-
-    NOTE:
-    This table will grow a lot in size and should be partitioned.
-    This management task is left to your DBA to design.
-
-    Attributes:
-        created_at: Timestamp when the record was created
-        updated_at: Timestamp when the record was modified
-        client_address: IP address of the submitting client (IPv4/IPv6)
-        system_facts: JSON object containing system facts
-        package_facts: JSON object containing package facts
+    GIN indexes on ``system_facts`` and ``package_facts`` enable
+    efficient PostgreSQL JSONB queries but are no-ops on other database
+    backends.  Both indexes can be large for deployments with many hosts;
+    monitor index size and consider table partitioning for large
+    installations.
     """
 
     __tablename__ = "fact_inventory"

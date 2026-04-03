@@ -1,6 +1,4 @@
-"""
-Setup the v1 router in its prefixed namespace
-"""
+"""v1 router -- mounts FactInventoryController under the /v1 prefix."""
 
 from litestar import Router
 
