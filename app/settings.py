@@ -18,6 +18,15 @@ Configurable elements (production):
   - RETENTION_DAYS: int            (default 365)
   - CLEANUP_INTERVAL_HOURS: int    (default 24)
   - CLEANUP_JITTER_MINUTES: int    (default 20; max random offset per cycle)
+  - MAX_JSON_FIELD_MB: int         (default 4; max size in MB for a single
+                                    JSON field -- system_facts or
+                                    package_facts -- validated before the
+                                    record is written to the database)
+  - MAX_REQUEST_BODY_MB: int       (default 9; max total request body size
+                                    in MB enforced at the HTTP layer; must
+                                    be greater than 2 x MAX_JSON_FIELD_MB
+                                    to leave room for both JSON fields and
+                                    the surrounding request envelope)
   - CREATE_ALL: bool               (default True)
   - DB_POOL_SIZE: int              (default 10)
   - DB_POOL_MAX_OVERFLOW: int      (default 20)
@@ -128,6 +137,8 @@ class Settings(BaseSettings):
     retention_days: int = Field(default=365, ge=1)
     cleanup_interval_hours: int = Field(default=24, ge=1)
     cleanup_jitter_minutes: int = Field(default=20, ge=0)
+    max_json_field_mb: int = Field(default=4, ge=1)
+    max_request_body_mb: int = Field(default=9, ge=1)
     create_all: bool = True
     db_pool_size: int = Field(default=10, ge=1)
     db_pool_max_overflow: int = Field(default=20, ge=0)
@@ -138,6 +149,22 @@ class Settings(BaseSettings):
     enable_metrics: bool = True
     enable_health_endpoint: bool = True
     enable_ready_endpoint: bool = True
+
+    @model_validator(mode="after")
+    def _check_body_size(self) -> Self:
+        """Ensure the request body limit can hold both JSON fields and the envelope.
+
+        The request body must be strictly larger than two JSON fields combined
+        so there is room for the surrounding JSON envelope and other request
+        overhead.  Requiring max_request_body_mb > 2 * max_json_field_mb
+        preserves this invariant regardless of the chosen field size.
+        """
+        if self.max_request_body_mb <= 2 * self.max_json_field_mb:
+            raise ValueError(  # noqa: TRY003
+                f"max_request_body_mb ({self.max_request_body_mb}) must be greater"
+                f" than 2 x max_json_field_mb ({2 * self.max_json_field_mb})"
+            )
+        return self
 
     @model_validator(mode="after")
     def _resolve_version(self) -> Self:
