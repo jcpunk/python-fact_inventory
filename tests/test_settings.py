@@ -7,6 +7,8 @@ from app.settings import Settings
 from pydantic import ValidationError
 
 _DEFAULT_JITTER_MINUTES = 20
+_DEFAULT_MAX_JSON_FIELD_MB = 4
+_DEFAULT_MAX_REQUEST_BODY_MB = 9
 
 
 class TestSettingsValidation:
@@ -83,3 +85,51 @@ class TestSettingsValidation:
         """Default cleanup_jitter_minutes must be 20."""
         s = Settings(database_uri="sqlite:///:memory:")
         assert s.cleanup_jitter_minutes == _DEFAULT_JITTER_MINUTES
+
+    def test_max_json_field_mb_default(self) -> None:
+        """Default max_json_field_mb must be 4."""
+        s = Settings(database_uri="sqlite:///:memory:")
+        assert s.max_json_field_mb == _DEFAULT_MAX_JSON_FIELD_MB
+
+    def test_max_json_field_mb_rejects_zero(self) -> None:
+        """max_json_field_mb must be >= 1."""
+        with pytest.raises(ValidationError, match="max_json_field_mb"):
+            Settings(database_uri="sqlite:///:memory:", max_json_field_mb=0)
+
+    def test_max_json_field_mb_rejects_negative(self) -> None:
+        """max_json_field_mb must be >= 1."""
+        with pytest.raises(ValidationError, match="max_json_field_mb"):
+            Settings(database_uri="sqlite:///:memory:", max_json_field_mb=-1)
+
+    def test_max_request_body_mb_default(self) -> None:
+        """Default max_request_body_mb must be 9."""
+        s = Settings(database_uri="sqlite:///:memory:")
+        assert s.max_request_body_mb == _DEFAULT_MAX_REQUEST_BODY_MB
+
+    def test_max_request_body_mb_rejects_zero(self) -> None:
+        """max_request_body_mb must be >= 1."""
+        with pytest.raises(ValidationError, match="max_request_body_mb"):
+            Settings(database_uri="sqlite:///:memory:", max_request_body_mb=0)
+
+    def test_max_request_body_mb_rejects_negative(self) -> None:
+        """max_request_body_mb must be >= 1."""
+        with pytest.raises(ValidationError, match="max_request_body_mb"):
+            Settings(database_uri="sqlite:///:memory:", max_request_body_mb=-1)
+
+    def test_max_request_body_mb_must_exceed_double_field_mb(self) -> None:
+        """max_request_body_mb must be greater than 2 x max_json_field_mb."""
+        with pytest.raises(ValidationError, match="max_request_body_mb"):
+            Settings(
+                database_uri="sqlite:///:memory:",
+                max_json_field_mb=4,
+                max_request_body_mb=8,  # equal to 2*4 -- not strictly greater
+            )
+
+    def test_max_request_body_mb_accepts_exactly_above_double_field_mb(self) -> None:
+        """max_request_body_mb == 2*max_json_field_mb + 1 must be accepted."""
+        s = Settings(
+            database_uri="sqlite:///:memory:",
+            max_json_field_mb=4,
+            max_request_body_mb=9,  # 9 > 2*4
+        )
+        assert s.max_request_body_mb == _DEFAULT_MAX_REQUEST_BODY_MB

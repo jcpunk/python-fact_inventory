@@ -33,8 +33,8 @@ from litestar.status_codes import (
 )
 from sqlalchemy.exc import SQLAlchemyError
 
-from ..constants import MAX_REQUEST_BODY_BYTES
 from ..schemas import FactInventory, FactInventoryWriteAPI
+from ..settings import settings
 from .responses import DetailResponse
 from .services import FactInventoryService
 
@@ -156,8 +156,9 @@ class FactInventoryController(Controller):
     # so ClassVar conflicts with the base class.
     tags: list[str] = ["v1"]  # noqa: RUF012
 
-    # See app/constants.py for the rationale.
-    request_max_body_size: int = MAX_REQUEST_BODY_BYTES
+    # Request body cap in bytes, derived from the MAX_REQUEST_BODY_MB setting.
+    # See app/settings.py for the rationale.
+    request_max_body_size: int = settings.max_request_body_mb * 1024 * 1024
 
     # Service injected by advanced-alchemy's DI provider.
     dependencies: dict[str, Any] = {  # noqa: RUF012

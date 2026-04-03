@@ -18,7 +18,7 @@ JSON indexing for efficient storage and querying.
 - **Flexible Storage**: Stores arbitrary JSON data for system and package facts
 - **OpenAPI Documentation**: Auto-generated API docs in debug mode
 - **IP Validation**: IPv4 and IPv6 address validation
-- **Payload Size Limits**: Configurable max body size and JSON field size validation
+- **Payload Size Limits**: Per-field and total request body size limits, both configurable via environment variables
 
 ## Server Requirements
 
@@ -68,6 +68,8 @@ export RUNTIME=testing     # loads .env.testing (default)
 | `RETENTION_DAYS`          | no       | `365`            | Days to retain host records before automatic purge                                                                                                                                                                         |
 | `CLEANUP_INTERVAL_HOURS`  | no       | `24`             | Hours between background cleanup runs                                                                                                                                                                                      |
 | `CLEANUP_JITTER_MINUTES`  | no       | `20`             | Max random offset per cleanup cycle (prevents thundering-herd)                                                                                                                                                             |
+| `MAX_JSON_FIELD_MB`       | no       | `4`              | Maximum size in MB for a single JSON field (`system_facts` or `package_facts`). Validated before each record is written to the database                                                                                    |
+| `MAX_REQUEST_BODY_MB`     | no       | `9`              | Maximum total request body size in MB, enforced at the HTTP layer. Must be greater than `2 x MAX_JSON_FIELD_MB` to leave room for both JSON fields and the surrounding request envelope                                    |
 | `CREATE_ALL`              | no       | `true`           | Auto-create tables on startup, bypassing Alembic                                                                                                                                                                           |
 | `DB_POOL_SIZE`            | no       | `10`             | Database connection pool size (PostgreSQL only)                                                                                                                                                                            |
 | `DB_POOL_MAX_OVERFLOW`    | no       | `20`             | Max connections above pool size (PostgreSQL only)                                                                                                                                                                          |
@@ -90,6 +92,8 @@ RATE_LIMIT_MAX_REQUESTS=2
 RETENTION_DAYS=365
 CLEANUP_INTERVAL_HOURS=24
 CLEANUP_JITTER_MINUTES=20
+MAX_JSON_FIELD_MB=4
+MAX_REQUEST_BODY_MB=9
 CREATE_ALL=true
 DB_POOL_SIZE=10
 DB_POOL_MAX_OVERFLOW=20
@@ -175,6 +179,7 @@ psql "${DATABASE_URI}"
 
 If submissions fail due to size:
 
-- Check JSON field sizes against `MAX_JSON_FIELD_BYTES` (default 4 MiB per field)
-- Check total request size against `MAX_REQUEST_BODY_BYTES` (default 9 MiB)
+- Increase `MAX_JSON_FIELD_MB` (default 4) to allow larger per-field JSON payloads
+- Increase `MAX_REQUEST_BODY_MB` (default 9) to allow a larger total request body
+- `MAX_REQUEST_BODY_MB` must always be greater than `2 x MAX_JSON_FIELD_MB`
 - Review logs for specific error messages
