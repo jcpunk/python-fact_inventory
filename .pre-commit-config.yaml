@@ -1,0 +1,31 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.11
+    hooks:
+      - id: ruff-format
+      - id: ruff-check
+        args: [--fix]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.20.2
+    hooks:
+      - id: mypy
+        name: Check variable types
+        files: ^fact_inventory/
+        additional_dependencies:
+          - advanced-alchemy
+          - litestar
+          - pydantic
+          - pydantic_settings
+
+  - repo: https://github.com/JoC0de/pre-commit-prettier
+    rev: v3.8.3
+    hooks:
+      - id: prettier

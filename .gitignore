@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+uv.lock
+.python-version
+.coverage
+*.*,cover
+coverage.json
+
+# Virtual environments
+.venv
+
+# vim files
+*.sw[po]
+
+# .env files
+.env*
+!.env.testing
